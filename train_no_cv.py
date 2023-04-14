@@ -17,8 +17,8 @@ from src.mae.CONSTANTS import *
 from src.mae.data import Data
 from src.mae.data._augment import *
 from src.mae.Logger import *
-from src.mae.models._callbacks import *
-from src.mae.models._callbacks import get_callbacks
+from src.mae.model._callbacks import *
+from src.mae.model._callbacks import get_callbacks
 
 # ARGUMENTS
 

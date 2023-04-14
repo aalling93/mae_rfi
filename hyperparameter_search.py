@@ -1,8 +1,8 @@
 import argparse
 import keras_tuner as kt
 import numpy as np
-from .src.mae.models import *
-from .src.mae.models import Fae
+from .src.mae.model import *
+from .src.mae.model import Fae
 from .src.mae.data import *
 from .src.mae.data import Data
 from .src.mae.hyperparameter.model_builder import model_builder

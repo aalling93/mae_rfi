@@ -1,7 +1,7 @@
 
 import tensorflow as tf 
-from ..models.util import *
-from ..models.Mae import *
+from ..model.util import *
+from ..model.Mae import *
 
 
 def model_builder2(hp):
