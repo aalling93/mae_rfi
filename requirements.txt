@@ -1,0 +1,15 @@
+# You need Python3..
+
+# external requirements
+numpy
+matplotlib
+jupyter
+jupyterlab
+ipython
+ipykernel
+clearml
+plotly
+tensorflow
+tensorflow-addons
+keras
+pandas
