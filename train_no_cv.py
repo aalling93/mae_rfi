@@ -21,7 +21,7 @@ from src.mae.model._callbacks import *
 from src.mae.model._callbacks import get_callbacks
 from src.mae.model.util import get_lr_metric
 # ARGUMENTS
-#https://www.kaggle.com/code/ritvik1909/masked-autoencoder-vision-transformer 
+
 #change this
 parser = argparse.ArgumentParser(description="Training RFI mae")
 parser.add_argument("-BUFFER_SIZE", "--BUFFER_SIZE", help="BUFFER_SIZE", default=BUFFER_SIZE, type=int)
