@@ -49,7 +49,7 @@ def create_encoder(
 def create_decoder(
     num_layers=DEC_LAYERS,
     num_heads=DEC_NUM_HEADS,
-    image_size=IMAGE_SIZE,
+    image_size=INPUT_SHAPE,
     dropout=DROPOUT_RATE,
     num_patches = NUM_PATCHES,
     enc_projection_dim=ENC_PROJECTION_DIM,
@@ -82,11 +82,26 @@ def create_decoder(
         x = tf.keras.layers.Add()([x3, x2])
     x = tf.keras.layers.LayerNormalization(epsilon=epsilon)(x)
     x = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dense(
-        units=PATCH_SIZE[0] * PATCH_SIZE[1] * INPUT_SHAPE[2], activation="sigmoid"
-    )(x)
-    x = tf.keras.layers.Reshape((PATCH_SIZE[0], PATCH_SIZE[1], INPUT_SHAPE[2]))(x)
-    outputs = tf.keras.layers.UpSampling2D(size=(10, 10))(x)
+    
+    if DECODER_ARCITECTURE_FULL == True:
+        xvv = tf.keras.layers.Dense(
+                units=image_size[0] * image_size[1], activation="sigmoid"
+                )(x)
+        xvv = tf.keras.layers.Reshape((image_size[0], image_size[1],1))(xvv)
+
+
+        xvh = tf.keras.layers.Dense(
+                units=image_size[0] * image_size[1], activation="sigmoid"
+                )(x)
+        xvh = tf.keras.layers.Reshape((image_size[0], image_size[1],1))(xvh)
+        outputs = tf.keras.layers.Concatenate()([xvv,xvh])
+
+    else:
+        x = tf.keras.layers.Dense(
+            units=PATCH_SIZE[0] * PATCH_SIZE[1] * INPUT_SHAPE[2], activation="sigmoid"
+        )(x)
+        x = tf.keras.layers.Reshape((PATCH_SIZE[0], PATCH_SIZE[1], INPUT_SHAPE[2]))(x)
+        outputs = tf.keras.layers.UpSampling2D(size=(10, 10))(x)
 
     # outputs = layers.Reshape((image_size[0] * image_size[1], 3))(pre_final)
 

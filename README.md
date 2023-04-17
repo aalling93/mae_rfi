@@ -10,7 +10,8 @@ kaaso@space.dtu.dk
 # Brief Description
 <a class="anchor" id="intro"></a>
 
-Her skal vi skrive en fancy beskrivelse
+A small package to train a masked autoencoder on images.
+
 
 
 # Table Of Contents

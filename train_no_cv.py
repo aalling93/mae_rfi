@@ -20,8 +20,7 @@ from src.mae.CL_Logger import *
 from src.mae.model._callbacks import *
 from src.mae.model._callbacks import get_callbacks
 from src.mae.model.util import get_lr_metric
-# ARGUMENTS
-
+from src.mae.CL_Logger.Clearml import clearml_plot_model
 #change this
 parser = argparse.ArgumentParser(description="Training RFI mae")
 parser.add_argument("-BUFFER_SIZE", "--BUFFER_SIZE", help="BUFFER_SIZE", default=BUFFER_SIZE, type=int)
@@ -92,7 +91,7 @@ if args.verbose > 0:
     print("\nloading data")
 
 data = Data()
-data.load_data(train_data= "data/processed/train_zm_jsd.npy",
+data.load_data(train_data= "data/processed/train_zm_d.npy",
                test_data = "data/processed/train_zm_d.npy")
 np.random.seed(args.seed)
 
@@ -108,7 +107,7 @@ clearml_upload_image(data.train[0:10])
 
 
 if args.verbose > 0:
-    print(f"\nTime: {args.NAME_APPEND}")
+    print(f"\nNumber of training examples: {len(data.train)} \nNumber of test example: {len(data.test)}\nTime: {args.NAME_APPEND}")
 
 
 if args.verbose > 0:
@@ -126,7 +125,7 @@ if args.verbose > 0:
 decoder = create_decoder(
     num_layers=args.DEC_LAYERS,
     num_heads=args.DEC_NUM_HEADS,
-    image_size=IMAGE_SIZE,
+    image_size=INPUT_SHAPE,
     dropout=args.DROPOUT_RATE,
     num_patches=NUM_PATCHES,
     enc_projection_dim=args.ENC_PROJECTION_DIM,
@@ -153,28 +152,15 @@ mae_model = MaskedAutoencoder(
     encoder=encoder,
     decoder=decoder,
 )
-
+clearml_plot_model(encoder)
+clearml_plot_model(decoder)
 
 mae_model._name = model_name
 
 if args.verbose > 0:
     print("\npreparing scheduler")
-#total_steps = int((len(data.train) / args.BATCH_SIZE) * args.EPOCHS)
-#warmup_steps = int(total_steps * args.WARMUP_EPOCH_PERCENTAGE)
 
 
-
-#cosine_warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base= LEARNING_RATE,
-#                                    total_steps= total_steps,
-#                                    warmup_learning_rate= LEARNING_RATE*1e-3,
-#                                    warmup_steps= warmup_steps,
-#                                    hold_base_rate_steps=0)
-
-#lrs = [tf.cast(scheduled_lrs(step), dtype=tf.float64) for step in range(total_steps)]
-
-#clearml_plot_graph(
-#    lrs, title="", series="Learning rate", xlabel="Step", ylabel="Learning rate"
-#)
 
 
 
@@ -182,24 +168,29 @@ if args.verbose > 0:
 total_steps = int((len(data.train) / BATCH_SIZE) * EPOCHS)
 # Compute the number of warmup batches or steps.
 warmup_steps = int(total_steps * WARMUP_EPOCH_PERCENTAGE)
-warmup_learning_rate = LEARNING_RATE
 
 if args.verbose > 0:
     print(f"\nwarmup steps: {warmup_steps}")
 
-    
-cosine_warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base= LEARNING_RATE,
+hold_base_rate_steps = 0
+cosine_warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base= args.LEARNING_RATE,
                                     total_steps= total_steps,
-                                    warmup_learning_rate= warmup_learning_rate*1e-3,
+                                    warmup_learning_rate= LEARNING_RATE_WARM_UP,
                                     warmup_steps= warmup_steps,
-                                    hold_base_rate_steps=0)
+                                    hold_base_rate_steps=hold_base_rate_steps)
 # Define the optimizer with the learning rate schedule
 optimizer = tfa.optimizers.AdamW(
     learning_rate=LEARNING_RATE, weight_decay=WEIGHT_DECAY
 )
 learning_rate_metric = get_lr_metric(optimizer)
 
-
+WarmUpCosineDecayScheduler = {
+    "learning_rate_base": LEARNING_RATE,
+    "total_steps": total_steps,
+    "warmup_steps": warmup_steps,
+    "LEARNING_RATE_WARM_UP": LEARNING_RATE_WARM_UP,
+    "hold_base_rate_steps": hold_base_rate_steps,
+}
 
 hyperparameters = {
     "ENC_TRANSFORMER_UNITS": args.ENC_TRANSFORMER_UNITS,
@@ -209,6 +200,7 @@ hyperparameters = {
 }
 
 task.connect(hyperparameters, "hyperparameters")
+task.connect(WarmUpCosineDecayScheduler, "WarmUpCosineDecayScheduler")
 # Compile and pretrain the model.
 
 if args.verbose > 0:
@@ -234,12 +226,18 @@ history = mae_model.fit(
     data.train_ds,
     epochs=args.EPOCHS,
     validation_data=data.train_ds,
+    workers = 25,
+    max_queue_size = 50,
     callbacks=train_callbacks,
 )
 
 if args.verbose > 0:
     print("\n=====================================\nTraining done. Evaluating model")
 # Measure its performance.
+
+
+
+####
 loss, mae = mae_model.evaluate(data.train_ds)
 print(f"Loss: {loss:.2f}")
 print(f"MAE: {mae:.2f}")
