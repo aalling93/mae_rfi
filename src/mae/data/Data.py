@@ -1,7 +1,8 @@
 import numpy as np
-from .data_util import *
 import tensorflow as tf
+
 from ..CONSTANTS import *
+from .data_util import _load_data
 
 
 class Data:
@@ -17,19 +18,26 @@ class Data:
 
     def load_data(
         self,
-        data: str = "../data/processed/train_zm_jsd.npy",
+        train_data: str = "../data/processed/train_zm_jsd.npy",
+        test_data: str = "",
         imsize: tuple = (340, 500, 2),
     ):
-        train = np.load(data, allow_pickle=True)
-        self.train = np.array(
-            [
-                center_crop(im, [imsize[1], imsize[0]])
-                for im in train
-                if (im.shape[0] >= imsize[0] and im.shape[1] >= imsize[1])
-            ]
-        )
+        
+        self.train = _load_data(train_data,crop=True,imsize=imsize)
+        if len(test_data)>0:
+            test = _load_data(test_data,crop=True,imsize=imsize)
+            self.test  = test[:20] #just picking 20 images.. Just to use less memory.. Could do whatever.
 
-        train_ds = tf.data.Dataset.from_tensor_slices(self.train[0:100])
+
+        train_ds = tf.data.Dataset.from_tensor_slices(self.train)
+        test_ds = tf.data.Dataset.from_tensor_slices(self.test)
+        
         self.train_ds = train_ds.shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(AUTO)
+        self.test_ds = test_ds.shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(AUTO)
 
         return None
+    
+
+    
+
+

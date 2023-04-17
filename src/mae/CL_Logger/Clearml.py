@@ -1,10 +1,27 @@
-from clearml import Dataset, Task, Logger
+import os
+
 import matplotlib.pyplot as plt
+import tensorflow as tf
+from clearml import Dataset, Logger, Task
 
 
 def clearml_log_scalar(ssim, epoch, series: str = "", title: str = "SSIM"):
     Logger.current_logger().report_scalar(title, series, iteration=epoch, value=ssim)
 
+
+
+def clearml_plot_model(model):
+    tf.keras.utils.plot_model(model, show_shapes=True, to_file="temp_del.png")
+    fig = plt.figure(figsize=(15,60))
+    plt.imshow(plt.imread('temp_del.png'))
+    plt.title(f'{model.name}', fontsize=12)
+    
+    Task.current_task().get_logger().report_matplotlib_figure(
+        title=f"{model.name}",
+        series="", 
+        figure=fig
+    )
+    os.remove("temp_del.png")
 
 def clearml_plot_examples(original, masked, reconstruct, epoch, img_ix):
     

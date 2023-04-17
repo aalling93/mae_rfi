@@ -39,6 +39,8 @@ data/raw
 data/results
 
 
+examples/*
+
 develop-eggs/
 dist/
 downloads/

@@ -33,7 +33,8 @@ class WarmUpCosine(tf.keras.optimizers.schedules.LearningRateSchedule):
             / float(self.total_steps - self.warmup_steps)
         )
         learning_rate = 0.5 * self.learning_rate_base * (1 + cos_annealed_lr)
-        # learning_rate = tf.cast(learning_rate,dtype=tf.float64)
+        #learning_rate = tf.Variable(learning_rate, trainable=False)
+        ## learning_rate = tf.cast(learning_rate,dtype=tf.float64)
         if self.warmup_steps > 0:
             if self.learning_rate_base < self.warmup_learning_rate:
                 raise ValueError(
@@ -101,6 +102,7 @@ def load_gpu(which: int = 0, memory: int = 60000):
     strategy = tf.device(f"/GPU:0")
 
     return strategy
+
 
 
 def get_lr_metric(optimizer):

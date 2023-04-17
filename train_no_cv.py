@@ -16,10 +16,10 @@ from src.mae._mae_util import load_gpu
 from src.mae.CONSTANTS import *
 from src.mae.data import Data
 from src.mae.data._augment import *
-from src.mae.Logger import *
+from src.mae.CL_Logger import *
 from src.mae.model._callbacks import *
 from src.mae.model._callbacks import get_callbacks
-
+from src.mae.model.util import get_lr_metric
 # ARGUMENTS
 #https://www.kaggle.com/code/ritvik1909/masked-autoencoder-vision-transformer 
 #change this
@@ -35,7 +35,7 @@ parser.add_argument("-GPU", "--GPU", help="which GPU", default=GPU_NUMBER, type=
 parser.add_argument( "-GPU_memory", "--GPU_memory", help="GPU memory", default=GPU_MEMORY, type=int)
 parser.add_argument( "-model_folder",  "--model_folder",  help="Folder for model",  default=MODEL_FOLDER,)
 parser.add_argument(  "-MODEL_NAME",  "--MODEL_NAME",  help="your name to clear ml",  default=MODEL_NAME,  type=str,)
-parser.add_argument( "-notes", "--notes", help="notes", default="NA", type=str,)
+parser.add_argument( "-notes", "--notes", help="notes", default="This is a Masked autoencoder model. The model is using a masked encoding strategy with a transformer structure to reconstruct original iamges.", type=str,)
 parser.add_argument( "-upload_data", "--upload_data", help="upload_data", default=False, type=bool)
 parser.add_argument(  "-NAME_APPEND",  "--NAME_APPEND",  help="NAME_APPEND",  default=NAME_APPEND,  type=str,)
 #### training
@@ -58,36 +58,6 @@ parser.add_argument(  "-DEC_TRANSFORMER_UNITS",  "--DEC_TRANSFORMER_UNITS",  hel
 parser.add_argument(  "-downstream",  "--downstream",  help="downstream",  default=False,  type=bool,)
 
 args = parser.parse_args()
-
-
-encoder = create_encoder(
-    num_heads=args.ENC_NUM_HEADS,
-    num_layers=args.ENC_LAYERS,
-    enc_transformer_units=args.ENC_TRANSFORMER_UNITS,
-    epsilon=args.LAYER_NORM_EPS,
-    enc_projection_dim=args.ENC_PROJECTION_DIM,
-    dropout=args.DROPOUT_RATE,
-)
-decoder = create_decoder(
-    num_layers=args.DEC_LAYERS,
-    num_heads=args.DEC_NUM_HEADS,
-    image_size=IMAGE_SIZE,
-    dropout=args.DROPOUT_RATE,
-    num_patches=NUM_PATCHES,
-    enc_projection_dim=args.ENC_PROJECTION_DIM,
-    dec_projection_dim=args.DEC_PROJECTION_DIM,
-    epsilon=args.LAYER_NORM_EPS,
-    dec_transformer_units=args.DEC_TRANSFORMER_UNITS,
-)
-
-patch_encoder = PatchEncoder(
-    patch_size=PATCH_SIZE,
-    projection_dim=args.ENC_PROJECTION_DIM,
-    mask_proportion=args.MASK_PROPORTION,
-    downstream=args.downstream,
-)
-
-
 
 
 if args.verbose > 0:
@@ -120,8 +90,10 @@ task = Task.create(project_name="RFI_mae", task_name=f"{model_name}")
 #### Original Data
 if args.verbose > 0:
     print("\nloading data")
+
 data = Data()
-data.load_data(args.data)
+data.load_data(train_data= "data/processed/train_zm_jsd.npy",
+               test_data = "data/processed/train_zm_d.npy")
 np.random.seed(args.seed)
 
 
@@ -183,36 +155,50 @@ mae_model = MaskedAutoencoder(
 )
 
 
-#mae_model.build((None, IMAGE_SIZE[0], IMAGE_SIZE[1], INPUT_SHAPE[2]))
 mae_model._name = model_name
-
-#sample_input = tf.zeros((2, IMAGE_SIZE[0], IMAGE_SIZE[1], INPUT_SHAPE[2]))
-#_ = mae_model(sample_input)
 
 if args.verbose > 0:
     print("\npreparing scheduler")
-total_steps = int((len(data.train) / args.BATCH_SIZE) * args.EPOCHS)
-warmup_steps = int(total_steps * args.WARMUP_EPOCH_PERCENTAGE)
-
-scheduled_lrs = WarmUpCosine(
-    learning_rate_base=args.LEARNING_RATE,
-    total_steps=total_steps,
-    warmup_learning_rate=0.0,
-    warmup_steps=warmup_steps,
-)
-
-lrs = [tf.cast(scheduled_lrs(step), dtype=tf.float64) for step in range(total_steps)]
-clearml_plot_graph(
-    lrs, title="", series="Learning rate", xlabel="Step", ylabel="Learning rate"
-)
+#total_steps = int((len(data.train) / args.BATCH_SIZE) * args.EPOCHS)
+#warmup_steps = int(total_steps * args.WARMUP_EPOCH_PERCENTAGE)
 
 
-# Create a global step variable
-global_step = tf.Variable(0, trainable=False)
+
+#cosine_warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base= LEARNING_RATE,
+#                                    total_steps= total_steps,
+#                                    warmup_learning_rate= LEARNING_RATE*1e-3,
+#                                    warmup_steps= warmup_steps,
+#                                    hold_base_rate_steps=0)
+
+#lrs = [tf.cast(scheduled_lrs(step), dtype=tf.float64) for step in range(total_steps)]
+
+#clearml_plot_graph(
+#    lrs, title="", series="Learning rate", xlabel="Step", ylabel="Learning rate"
+#)
+
+
+
+#### Optimizer
+total_steps = int((len(data.train) / BATCH_SIZE) * EPOCHS)
+# Compute the number of warmup batches or steps.
+warmup_steps = int(total_steps * WARMUP_EPOCH_PERCENTAGE)
+warmup_learning_rate = LEARNING_RATE
+
+if args.verbose > 0:
+    print(f"\nwarmup steps: {warmup_steps}")
+
+    
+cosine_warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base= LEARNING_RATE,
+                                    total_steps= total_steps,
+                                    warmup_learning_rate= warmup_learning_rate*1e-3,
+                                    warmup_steps= warmup_steps,
+                                    hold_base_rate_steps=0)
 # Define the optimizer with the learning rate schedule
 optimizer = tfa.optimizers.AdamW(
-    learning_rate=lambda: scheduled_lrs(global_step), weight_decay=WEIGHT_DECAY
+    learning_rate=LEARNING_RATE, weight_decay=WEIGHT_DECAY
 )
+learning_rate_metric = get_lr_metric(optimizer)
+
 
 
 hyperparameters = {
@@ -228,14 +214,19 @@ task.connect(hyperparameters, "hyperparameters")
 if args.verbose > 0:
     print("\nCompiling model")
 mae_model.compile(
-    optimizer=optimizer, loss=tf.keras.losses.MeanSquaredError(), metrics=["mae"]
+    optimizer=optimizer,
+    loss=tf.keras.losses.MeanSquaredError(),
+    metrics=["mae", learning_rate_metric],
 )
-
 
 
 train_callbacks = get_callbacks(
-    mae_model, save_path = args.model_folder,epoch_interval=5, test_images=data.train[:10]
+    mae_model,
+    save_path=args.model_folder,
+    epoch_interval=5,
+    test_images=data.train[:10],
 )
+train_callbacks.append(cosine_warm_up_lr)
 
 if args.verbose > 0:
     print("\nTraining model")
