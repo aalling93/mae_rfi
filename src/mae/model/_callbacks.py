@@ -338,7 +338,7 @@ class SSIMMonitor_ae(tf.keras.callbacks.Callback):
 
         test_decoder_outputs = self.model.predict(self.train_images)
         test_decoder_outputs = tf.cast(test_decoder_outputs, tf.float32)
-        test_images = tf.cast(self.test_images, tf.float32) 
+        test_images = tf.cast(self.train_images, tf.float32) 
         #print(test_decoder_outputs.shape)
         #print(test_images.shape)
         sim_train = tf.reduce_mean(

@@ -37,7 +37,8 @@ test = np.array(
     ]
 )
 
-
+train = train[0:5]
+test = test[0:6]
 
 BATCH_SIZE = 5
 EPOCHS = 16
@@ -78,7 +79,7 @@ for latent in [25, 75, 125, 250, 350, 500]:
     )
     # train_images,test_images
     ssim_callback = SSIMMonitor_ae(train, test)
-    debug = np.vstack((train[-10:], test[-10:]))
+    debug = np.vstack((train[-11:], test[-10:]))
     debug_callback = TrainMonitor_ae(epoch_interval=5, test_images=debug)
 
     best_model_file = f"../models/{ae_model.name}/best_model_{ae_model.name}"
@@ -159,7 +160,7 @@ for latent in [25, 75, 125, 250, 350, 500]:
         "train size": train.shape,
         "test size": test.shape,
         "debug size": debug.shape,
-        "debug comment": "10 train 10 test",
+        "debug comment": "11 train 10 test",
         "latent space": latent,
         "model name": ae_model.name,
         "model summary": get_model_summary(ae_model),
