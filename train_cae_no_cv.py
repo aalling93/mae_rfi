@@ -28,7 +28,7 @@ train = np.array(
         if (im.shape[0] >= 340 and im.shape[1] >= 500)
     ]
 )
-train = train[0:10]
+
 test = np.array(
     [
         center_crop(im, [500, 340])
@@ -36,7 +36,7 @@ test = np.array(
         if (im.shape[0] >= 340 and im.shape[1] >= 500)
     ]
 )
-test = test[0:10]
+
 
 
 BATCH_SIZE = 5
