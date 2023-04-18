@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import tensorflow as tf
+import io
 
 """'
 For Mac M1 there are many errors with TF.. One of them is the usage of these Learningrate schedulaers..
@@ -111,3 +112,13 @@ def get_lr_metric(optimizer):
         return optimizer.lr
 
     return lr
+
+
+
+
+def get_model_summary(model):
+    stream = io.StringIO()
+    model.summary(print_fn=lambda x: stream.write(x + '\n'))
+    summary_string = stream.getvalue()
+    stream.close()
+    return summary_string

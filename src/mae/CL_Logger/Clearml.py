@@ -71,6 +71,55 @@ def clearml_plot_examples(original, masked, reconstruct, epoch, img_ix):
     )
 
 
+
+
+
+
+
+def clearml_plot_org_latent_recon(original, masked, reconstruct, epoch, img_ix):
+    
+    fig = plt.figure(figsize=(15, 10))
+    plt.subplot(2, 3, 1)
+    im = plt.imshow(original[:, :, 1], vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Original VH: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 2)
+    im = plt.imshow(masked[:, :], cmap="gray")
+    plt.title(f"{img_ix} latent space : {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 3)
+    im = plt.imshow(reconstruct[:, :, 1], vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Reconstructed VH: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 4)
+    im = plt.imshow(original[:, :, 0], vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Original VV: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 6)
+    im = plt.imshow(reconstruct[:, :, 0], vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Reconstructed VV: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    Task.current_task().get_logger().report_matplotlib_figure(
+        title=f"Img {img_ix} Debug Samples",
+        series="",
+        figure=fig,
+        report_image=True,
+        iteration=epoch,
+    )
+
+
+
+
 def clearml_plot_graph(
     values,
     title: str = "",

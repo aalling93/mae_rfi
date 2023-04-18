@@ -9,6 +9,10 @@ from keras import backend as K
 from ..CL_Logger import *
 
 
+
+
+
+
 def get_callbacks(
     model,
     save_path: str = "",
@@ -294,3 +298,94 @@ def cosine_decay_with_warmup(
         warmup_rate = slope * tf.cast(global_step, tf.float32) + warmup_learning_rate
         learning_rate = tf.where(global_step < warmup_steps, warmup_rate, learning_rate)
     return tf.where(global_step > total_steps, 0.0, learning_rate, name="learning_rate")
+
+
+
+class SSIMMonitor_ae(tf.keras.callbacks.Callback):
+    def __init__(self, train_images,test_images):
+        self.test_images = test_images
+        self.train_images = train_images
+
+    def on_epoch_end(self, epoch, logs=None):
+        
+        test_decoder_outputs = self.model.predict(self.test_images)
+        test_decoder_outputs = tf.cast(test_decoder_outputs, tf.float32)
+        test_images = tf.cast(self.test_images, tf.float32) 
+        #print(test_decoder_outputs.shape)
+        #print(test_images.shape)
+        sim_test = tf.reduce_mean(
+            tf.image.ssim(
+                abs(test_images),
+                abs(test_decoder_outputs),
+                1.0,
+            )
+        )
+        sim_vv_test = tf.reduce_mean(
+            tf.image.ssim(
+                abs(test_images[:,:,:,0:1]),
+                abs(test_decoder_outputs[:,:,:,0:1]),
+                1.0,
+            )
+        )
+        sim_vh_test = tf.reduce_mean(
+            tf.image.ssim(
+                abs(test_images[:,:,:,1:]),
+                abs(test_decoder_outputs[:,:,:,1:]),
+                1.0,
+            )
+        )
+
+
+        test_decoder_outputs = self.model.predict(self.train_images)
+        test_decoder_outputs = tf.cast(test_decoder_outputs, tf.float32)
+        test_images = tf.cast(self.test_images, tf.float32) 
+        #print(test_decoder_outputs.shape)
+        #print(test_images.shape)
+        sim_train = tf.reduce_mean(
+            tf.image.ssim(
+                abs(test_images),
+                abs(test_decoder_outputs),
+                1.0,
+            )
+        )
+        sim_vv_train = tf.reduce_mean(
+            tf.image.ssim(
+                abs(test_images[:,:,:,0:1]),
+                abs(test_decoder_outputs[:,:,:,0:1]),
+                1.0,
+            )
+        )
+        sim_vh_train = tf.reduce_mean(
+            tf.image.ssim(
+                abs(test_images[:,:,:,1:]),
+                abs(test_decoder_outputs[:,:,:,1:]),
+                1.0,
+            )
+        )
+
+        clearml_log_scalar(sim_test, epoch, "test_all", "SSIM")
+        clearml_log_scalar(sim_vv_test, epoch, "test_vv", "SSIM")
+        clearml_log_scalar(sim_vh_test, epoch, "test_vh", "SSIM")
+
+        clearml_log_scalar(sim_train, epoch, "train_all", "SSIM")
+        clearml_log_scalar(sim_vv_train, epoch, "train_vv", "SSIM")
+        clearml_log_scalar(sim_vh_train, epoch, "train_vh", "SSIM")
+
+
+class TrainMonitor_ae(tf.keras.callbacks.Callback):
+    def __init__(self, epoch_interval:int=5, test_images=None):
+        self.epoch_interval = epoch_interval
+        self.test_images = test_images
+
+    def on_epoch_end(self, epoch, logs=None):
+        if self.epoch_interval and epoch % self.epoch_interval == 0:
+            for img_ix in range(len(self.test_images)):
+
+                encoded = self.model.layers[1].predict(self.test_images[img_ix:img_ix+1])
+                decoded = self.model.layers[2].predict(encoded)
+
+
+
+                clearml_plot_org_latent_recon(
+                    self.test_images[img_ix], encoded[0], decoded[0], epoch, img_ix
+                )

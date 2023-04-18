@@ -1,4 +1,4 @@
-
+Gif link follows...
 <img src="figs/test.png" width="750" align="center">
 
 
@@ -10,7 +10,10 @@ kaaso@space.dtu.dk
 # Brief Description
 <a class="anchor" id="intro"></a>
 
-A small package to train a masked autoencoder on images.
+This is a small github module that I made to compare a convolutional autoencoder with a masked autoencoder.
+They are implemented for comparison. Neither of these two models are optimised using, e.g., hyperparamters optimization such as keras tuner. 
+
+
 
 
 
@@ -20,8 +23,7 @@ A small package to train a masked autoencoder on images.
 -  [Introduction](#Introduction)
 -  [Requirements](#Requirements)
 -  [Install and Run](#Install-and-Run)
--  [Examples ](#use)
--  [EMI ](#emi)
+-  [Training a model  ](#use)
 -  [Acknowledgments](#Acknowledgments)
 
 
@@ -29,56 +31,42 @@ A small package to train a masked autoencoder on images.
 # Requirements
  <a class="anchor" id="Requirements"></a>
 
-- See requirements filde..
+- See requirements file..
+
 # Install and Run
  <a class="anchor" id="Install-and-Run"></a>
 
-Currently, only git is supported. Later pypi will be aded. So, clone the dir.
+Currently, only git is supported... So, clone the dir.
 
+```python
+git clone git@github.com:aalling93/mae_rfi.git
+```
 
+Now go to the folder and use it as is..
 
-
-## Make reconstructions <a class="anchor" id="use"></a>
+## Training a model <a class="anchor" id="use"></a>
 Go back to [Table of Content](#content)
 
+The models can be training using either the **train.py** scripts, or using a notebook. In this module, the mae is trained using the **train.py** script whereas the cae is trained using a notebook. This is a simle version of the modules/models used in my paper. It would be relativly simple to also add hyperparameter optimization etc to this module. It has not been done here. 
 
 
-
-1. Load module
+1. Train mae
 ------------
 
 ```python
-
+python3 train_no_cv.py
 ```
 
 
-1. Load data
+2. train cae
 ------------
-
-```python
-
-
-```
-
-2. Make reconstructions
-----------------
-```python
-
-```
-
-
-3.Do PCA
-```python
-
-```
+See the **rfi_ae.ipynb** in the examples..
 
 
 
+I am using a clearml callback that gives me the results as is during training (i.e. i am evaluating them after each try). 
 
-4. comapre results
-```python
-
-```
+This module has only been made to compare models and i have therefore not implekemtne a inferrence module in the src.
 
 
 
@@ -90,7 +78,7 @@ Go back to [Table of Content](#content)
 Go back to [Table of Content](#content)
 
 
-
+See paper (link follows.)
 
 
 
@@ -98,9 +86,12 @@ Go back to [Table of Content](#content)
 
 # Acknowledgments
  <a class="anchor" id="Acknowledgments"></a>
-Us
+Myself.
+
+The reviwer who introduced me to MAEs.
+
 
  # Licence
 See License file. In short:
 
-1. Cite us
+1. Cite us. Paper link follows.
