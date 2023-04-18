@@ -1,504 +1,8 @@
 import numpy as np
-#import tensorflow.compat.v2 as tf
-import tensorflow as tf
-import tensorflow_probability as tfp
-
-tfk = tf.keras
-tfkl = tf.keras.layers
-tfpl = tfp.layers
-tfd = tfp.distributions
-
-
-from .get_funcs import *
-from .model_util import *
-
 import tensorflow as tf
 
-
-
-def modelPoolingDropoutHyperparms2(img_size, 
-                        filters1:int=164,
-                        filters2:int=82,
-                        filters3:int=41,
-                        filterSize:int=3,
-                        latent_space_dim: int = 128,
-                        L1L2:float = 0.0001,
-                        dropOut: bool =True):
-
-    
-    latent_space_dim = latent_space_dim-(latent_space_dim%5)
-    filterSize = (filterSize,filterSize)
-    # Encoder
-    latent_space_dim = latent_space_dim - latent_space_dim % 5
-    x = tf.keras.layers.Input(shape=img_size, name="encoder_input")
-
-    x = tf.keras.layers.Input(shape=img_size, name="encoder_input")
-
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=img_size[-1],
-        kernel_size=filterSize,
-        padding="same", kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        strides=1,
-        name="encoder_conv_1",
-    )(x)
-    encoderModel = tf.keras.layers.LeakyReLU(name="encoder_leakyrelu_1")(
-        encoderModel
-    )
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_1")(
-        encoderModel
-    )
-    
-    encoderModel = tf.keras.layers.MaxPooling2D(
-        pool_size=filterSize, padding="same", strides=(1, 1), name="encoder_maxpooling_1"
-    )(encoderModel)
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.1, name="encoder_dropout_1")(encoderModel)
-
-    
-
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=int(filters1),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=1,
-        name="encoder_conv_2",
-    )(encoderModel)
-
-    encoderModel = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_2")(
-        encoderModel
-    )
-
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_2")(
-        encoderModel
-    )
-    
-    encoderModel = tf.keras.layers.MaxPooling2D(
-        pool_size=filterSize, padding="same", strides=(2, 2), name="encoder_maxpooling_2"
-    )(encoderModel)
-    
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.1, name="encoder_dropout_2")(encoderModel)
-
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=int(filters1),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=2,
-        name="encoder_conv_3",
-    )(encoderModel)
-
-    encoderModel = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_3")(
-        encoderModel
-    )
-
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_3")(
-        encoderModel
-    )
-    
-    #encoder_pool_layer3 = tf.keras.layers.MaxPooling2D(
-    #    pool_size=(3, 3), padding="same", strides=(2, 2), name="encoder_maxpooling_3"
-    #)(encoder_norm_layer3)
-
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.1, name="encoder_dropout_3")(encoderModel)
-
-
-
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=int(filters2), kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2), padding="same", strides=1, name="encoder_conv_4"
-    )(encoderModel)
-
-    encoderModel = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_4")(
-        encoderModel
-    )
-
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_4")(
-        encoderModel
-    )
-
-    
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.1, name="encoder_dropout_4")(encoderModel)
-    
-    
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=int(filters3), kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2), padding="same", strides=1, name="encoder_conv_5"
-    )(encoderModel)
-
-    encoderModel = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_5")(
-        encoderModel
-    )
-
-    
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_5")(
-        encoderModel
-    )
-
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.1, name="encoder_dropout_5")(encoderModel)
-    
-
-    shape_before_flatten = tf.keras.backend.int_shape(encoderModel)[1:]
-    encoderModel = tf.keras.layers.Flatten()(encoderModel)
-    encoderModel = tf.keras.layers.Dense(
-        units=latent_space_dim, name="encoder_output"
-    )(encoderModel)
-
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.1, name="encoder_output_drop")(encoderModel)
-
-
-
-    #encoderModel = tf.keras.layers.Reshape((5, -1))(encoderModel)
-
-    encoder = tf.keras.models.Model(x, encoderModel, name="encoder_model")
-
-    decoder_input = tf.keras.layers.Input(
-        shape=(5, int(latent_space_dim / 5)), name="decoder_input"
-    )
-    decoderModel = tf.keras.layers.Flatten()(decoder_input)
-    decoderModel = tf.keras.layers.Dense(
-        units=np.prod(shape_before_flatten), name="decoder_dense_1"
-    )(decoderModel)
-    decoderModel = tf.keras.layers.Reshape(target_shape=shape_before_flatten)(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=int(filters3),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_1",
-    )(decoderModel)
-    
-    decoderModel = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_1")(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.BatchNormalization(name="decoder_norm_1")(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=int(filters2),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=2,
-        name="decoder_conv_tran_2",
-    )(decoderModel)
-
-    decoderModel = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_2")(
-        decoderModel
-    )
-
-
-    decoderModel = tf.keras.layers.BatchNormalization(name="decoder_norm_2")(
-        decoderModel
-    )
-    
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=int(filters1),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=2,
-        name="decoder_conv_tran_3",
-    )(decoderModel)
-
-    decoderModel = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_3")(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.BatchNormalization(name="decoder_norm_3")(
-        decoderModel
-    )
-    
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=int(filters1),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_4",
-    )(decoderModel)
-
-    decoderModel = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_4")(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.BatchNormalization(name="decoder_norm_4")(
-        decoderModel
-    )
-    
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=img_size[-1],
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_6",
-    )(decoderModel)
-    decoderModel = tf.keras.layers.ReLU(name="decoder_leakyrelu_6")(
-        decoderModel
-    )
-
-    decoder = tf.keras.models.Model(decoder_input, decoderModel, name="decoder_model")
-
-    ae_input = tf.keras.layers.Input(shape=img_size, name="AE_input")
-    ae_encoder_output = encoder(ae_input)
-    ae_decoder_output = decoder(ae_encoder_output)
-
-    ae = tf.keras.models.Model(ae_input, ae_decoder_output, name="AE_rfi")
-
-    
-
-    return ae, encoder, decoder
-
-
-
-def modelPoolingDropoutHyperparms(img_size, 
-                        filters:int=164,
-                        filterSize:int=3,
-                        latent_space_dim: int = 128,
-                        L1L2:float = 0.0001,
-                        dropOut: bool =True):
-    latent_space_dim = latent_space_dim-(latent_space_dim%5)
-    
-    filterSize = (filterSize,filterSize)
-    # Encoder
-    alpha=0.5
-    latent_space_dim = latent_space_dim - latent_space_dim % 5
-    x = tf.keras.layers.Input(shape=img_size, name="encoder_input")
-
-    x = tf.keras.layers.Input(shape=img_size, name="encoder_input")
-
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=img_size[-1],
-        kernel_size=filterSize,
-        padding="same", kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        strides=1,
-        name="encoder_conv_1",activation=None,
-    )(x)
-    encoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="encoder_leakyrelu_1")(
-        encoderModel
-    )
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_1")(
-        encoderModel
-    )
-    
-    encoderModel = tf.keras.layers.MaxPooling2D(
-        pool_size=filterSize, padding="same", strides=(1, 1), name="encoder_maxpooling_1"
-    )(encoderModel)
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.2, name="encoder_dropout_1")(encoderModel)
-
-    
-
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=int(filters),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=1,
-        name="encoder_conv_2",activation=None,
-    )(encoderModel)
-
-    encoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="encoder_activ_layer_2")(
-        encoderModel
-    )
-
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_2")(
-        encoderModel
-    )
-    
-    encoderModel = tf.keras.layers.MaxPooling2D(
-        pool_size=filterSize, padding="same", strides=(2, 2), name="encoder_maxpooling_2"
-    )(encoderModel)
-    
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.2, name="encoder_dropout_2")(encoderModel)
-
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=int(filters),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=2,
-        name="encoder_conv_3",activation=None,
-    )(encoderModel)
-
-    encoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="encoder_activ_layer_3")(
-        encoderModel
-    )
-
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_3")(
-        encoderModel
-    )
-    
-    #encoder_pool_layer3 = tf.keras.layers.MaxPooling2D(
-    #    pool_size=(3, 3), padding="same", strides=(2, 2), name="encoder_maxpooling_3"
-    #)(encoder_norm_layer3)
-
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.2, name="encoder_dropout_3")(encoderModel)
-
-
-
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=int(filters/2), kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2), padding="same", strides=1, name="encoder_conv_4",activation=None
-    )(encoderModel)
-
-    encoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="encoder_activ_layer_4")(
-        encoderModel
-    )
-
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_4")(
-        encoderModel
-    )
-
-    
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.2, name="encoder_dropout_4")(encoderModel)
-    
-    
-    encoderModel = tf.keras.layers.Conv2D(
-        filters=int(filters/4), kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2), padding="same", strides=1, name="encoder_conv_5", activation=None
-    )(encoderModel)
-
-    encoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="encoder_activ_layer_5")(
-        encoderModel
-    )
-
-    
-    encoderModel = tf.keras.layers.BatchNormalization(name="encoder_norm_5")(
-        encoderModel
-    )
-
-    if dropOut==True:
-        encoderModel = tf.keras.layers.Dropout(0.2, name="encoder_dropout_5")(encoderModel)
-    
-
-    shape_before_flatten = tf.keras.backend.int_shape(encoderModel)[1:]
-    encoderModel = tf.keras.layers.Flatten()(encoderModel)
-    encoderModel = tf.keras.layers.Dense(
-        units=latent_space_dim, name="encoder_output",activation='tanh'
-    )(encoderModel)
-    #encoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="encoder_activ_layer_6")(
-    #    encoderModel
-    #)
-
-    shape_after_flatten = tf.keras.backend.int_shape(encoderModel)[1:]
-
-
-    #encoderModel = tf.keras.layers.Reshape((5, -1))(encoderModel)
-
-    encoder = tf.keras.models.Model(x, encoderModel, name="encoder_model")
-
-    decoder_input = tf.keras.layers.Input(
-        shape=(latent_space_dim), name="decoder_input"
-    )
-    #decoderModel = tf.keras.layers.Flatten()(decoder_input)
-    decoderModel = tf.keras.layers.Dense(
-        units=np.prod(shape_before_flatten), name="decoder_dense_1",activation=None
-    )(decoder_input)
-    decoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="decoder_activ_layer_1")(
-        decoderModel
-    )
-    
-    decoderModel = tf.keras.layers.Reshape(target_shape=shape_before_flatten)(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=int(filters/4),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_1",activation=None,
-    )(decoderModel)
-    
-    decoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="decoder_leakyrelu_1")(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.BatchNormalization(name="decoder_norm_1")(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=int(filters/2),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=2,
-        name="decoder_conv_tran_2",activation=None,
-    )(decoderModel)
-
-    decoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="decoder_leakyrelu_2")(
-        decoderModel
-    )
-
-
-    decoderModel = tf.keras.layers.BatchNormalization(name="decoder_norm_2")(
-        decoderModel
-    )
-    
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=int(filters),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=2,
-        name="decoder_conv_tran_3",activation=None,
-    )(decoderModel)
-
-    decoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="decoder_leakyrelu_3")(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.BatchNormalization(name="decoder_norm_3")(
-        decoderModel
-    )
-    
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=int(filters),
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_4",activation=None,
-    )(decoderModel)
-
-    decoderModel = tf.keras.layers.LeakyReLU(alpha= alpha,name="decoder_leakyrelu_4")(
-        decoderModel
-    )
-
-    decoderModel = tf.keras.layers.BatchNormalization(name="decoder_norm_4")(
-        decoderModel
-    )
-    
-
-    decoderModel = tf.keras.layers.Conv2DTranspose(
-        filters=img_size[-1],
-        kernel_size=filterSize, kernel_regularizer=tf.keras.regularizers.L1L2(L1L2), bias_regularizer=tf.keras.regularizers.L1L2(L1L2),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_6",activation=None,
-    )(decoderModel)
-    decoderModel = tf.keras.layers.Softmax(name="decoder_softmax")(
-        decoderModel
-    )
-
-    decoder = tf.keras.models.Model(decoder_input, decoderModel, name="decoder_model")
-
-    ae_input = tf.keras.layers.Input(shape=img_size, name="AE_input")
-    ae_encoder_output = encoder(ae_input)
-    ae_decoder_output = decoder(ae_encoder_output)
-
-    ae = tf.keras.models.Model(ae_input, ae_decoder_output, name="AE_rfi")
-
-    
-
-    return ae, encoder, decoder
-
+from .model_util import ssim_loss
+from ..util import get_lr_metric
 
 
 def modelPoolingDropout(img_size, latent_space_dim: int = 128):
@@ -511,7 +15,9 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
     encoder_conv_layer1 = tf.keras.layers.Conv2D(
         filters=img_size[-1],
         kernel_size=(3, 3),
-        padding="same", kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        padding="same",
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
         strides=1,
         name="encoder_conv_1",
     )(x)
@@ -521,17 +27,19 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
     encoder_norm_layer1 = tf.keras.layers.BatchNormalization(name="encoder_norm_1")(
         encoder_activ_layer1
     )
-    
+
     encoder_pool_layer1 = tf.keras.layers.MaxPooling2D(
         pool_size=(3, 3), padding="same", strides=(1, 1), name="encoder_maxpooling_1"
     )(encoder_norm_layer1)
-    encoder_drop_layer1 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_1")(encoder_pool_layer1)
-
-    
+    encoder_drop_layer1 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_1")(
+        encoder_pool_layer1
+    )
 
     encoder_conv_layer2 = tf.keras.layers.Conv2D(
         filters=164,
-        kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
         padding="same",
         strides=1,
         name="encoder_conv_2",
@@ -544,16 +52,20 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
     encoder_norm_layer2 = tf.keras.layers.BatchNormalization(name="encoder_norm_2")(
         encoder_activ_layer2
     )
-    
+
     encoder_pool_layer2 = tf.keras.layers.MaxPooling2D(
         pool_size=(3, 3), padding="same", strides=(2, 2), name="encoder_maxpooling_2"
     )(encoder_norm_layer2)
 
-    encoder_drop_layer2 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_2")(encoder_pool_layer2)
+    encoder_drop_layer2 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_2")(
+        encoder_pool_layer2
+    )
 
     encoder_conv_layer3 = tf.keras.layers.Conv2D(
         filters=164,
-        kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
         padding="same",
         strides=2,
         name="encoder_conv_3",
@@ -566,17 +78,23 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
     encoder_norm_layer3 = tf.keras.layers.BatchNormalization(name="encoder_norm_3")(
         encoder_activ_layer3
     )
-    
-    #encoder_pool_layer3 = tf.keras.layers.MaxPooling2D(
+
+    # encoder_pool_layer3 = tf.keras.layers.MaxPooling2D(
     #    pool_size=(3, 3), padding="same", strides=(2, 2), name="encoder_maxpooling_3"
-    #)(encoder_norm_layer3)
+    # )(encoder_norm_layer3)
 
-    encoder_drop_layer3 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_3")(encoder_norm_layer3)
-
-
+    encoder_drop_layer3 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_3")(
+        encoder_norm_layer3
+    )
 
     encoder_conv_layer4 = tf.keras.layers.Conv2D(
-        filters=56, kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001), padding="same", strides=1, name="encoder_conv_4"
+        filters=56,
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        padding="same",
+        strides=1,
+        name="encoder_conv_4",
     )(encoder_drop_layer3)
 
     encoder_activ_layer4 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_4")(
@@ -587,25 +105,31 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
         encoder_activ_layer4
     )
 
-    
-    encoder_drop_layer4 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_4")(encoder_norm_layer4)
-    
-    
+    encoder_drop_layer4 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_4")(
+        encoder_norm_layer4
+    )
+
     encoder_conv_layer5 = tf.keras.layers.Conv2D(
-        filters=28, kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001), padding="same", strides=1, name="encoder_conv_5"
+        filters=28,
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        padding="same",
+        strides=1,
+        name="encoder_conv_5",
     )(encoder_drop_layer4)
 
     encoder_activ_layer5 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_5")(
         encoder_conv_layer5
     )
 
-    
     encoder_norm_layer5 = tf.keras.layers.BatchNormalization(name="encoder_norm_5")(
         encoder_activ_layer5
     )
 
-    encoder_drop_layer5 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_5")(encoder_norm_layer5)
-    
+    encoder_drop_layer5 = tf.keras.layers.Dropout(0.1, name="encoder_dropout_5")(
+        encoder_norm_layer5
+    )
 
     shape_before_flatten = tf.keras.backend.int_shape(encoder_drop_layer5)[1:]
     encoder_flatten = tf.keras.layers.Flatten()(encoder_drop_layer5)
@@ -613,9 +137,9 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
         units=latent_space_dim, name="encoder_output"
     )(encoder_flatten)
 
-    encoder_output_drop = tf.keras.layers.Dropout(0.1, name="encoder_output_drop")(encoder_output)
-
-
+    encoder_output_drop = tf.keras.layers.Dropout(0.1, name="encoder_output_drop")(
+        encoder_output
+    )
 
     encoder_output_drop = tf.keras.layers.Reshape((5, -1))(encoder_output_drop)
 
@@ -634,12 +158,14 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
 
     decoder_conv_tran_layer1 = tf.keras.layers.Conv2DTranspose(
         filters=28,
-        kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
         padding="same",
         strides=1,
         name="decoder_conv_tran_1",
     )(decoder_reshape)
-    
+
     decoder_activ_layer1 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_1")(
         decoder_conv_tran_layer1
     )
@@ -650,7 +176,9 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
 
     decoder_conv_tran_layer2 = tf.keras.layers.Conv2DTranspose(
         filters=56,
-        kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
         padding="same",
         strides=2,
         name="decoder_conv_tran_2",
@@ -660,15 +188,15 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
         decoder_conv_tran_layer2
     )
 
-
     decoder_norm_layer2 = tf.keras.layers.BatchNormalization(name="decoder_norm_2")(
         decoder_activ_layer2
     )
-    
 
     decoder_conv_tran_layer3 = tf.keras.layers.Conv2DTranspose(
         filters=164,
-        kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
         padding="same",
         strides=2,
         name="decoder_conv_tran_3",
@@ -681,11 +209,12 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
     decoder_norm_layer3 = tf.keras.layers.BatchNormalization(name="decoder_norm_3")(
         decoder_activ_layer3
     )
-    
 
     decoder_conv_tran_layer4 = tf.keras.layers.Conv2DTranspose(
         filters=164,
-        kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
         padding="same",
         strides=1,
         name="decoder_conv_tran_4",
@@ -698,11 +227,12 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
     decoder_norm_layer4 = tf.keras.layers.BatchNormalization(name="decoder_norm_4")(
         decoder_activ_layer4
     )
-    
 
     decoder_conv_tran_layer6 = tf.keras.layers.Conv2DTranspose(
         filters=img_size[-1],
-        kernel_size=(3, 3), kernel_regularizer=tf.keras.regularizers.L1L2(0.0001), bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        kernel_size=(3, 3),
+        kernel_regularizer=tf.keras.regularizers.L1L2(0.0001),
+        bias_regularizer=tf.keras.regularizers.L1L2(0.0001),
         padding="same",
         strides=1,
         name="decoder_conv_tran_6",
@@ -719,375 +249,8 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
 
     ae = tf.keras.models.Model(ae_input, ae_decoder_output, name="AE_rfi")
 
-    optimizer = optimizer = tf.keras.optimizers.Adam(clipnorm=0.8, clipvalue=0.8, learning_rate=0.001
-    )
-
-    lr_metric = get_lr_metric(optimizer)
-    ae.compile(optimizer, loss=ssim_loss, metrics=["mse", lr_metric])
-
-    return ae, encoder, decoder
-
-
-
-def create_model_pooling(img_size, latent_space_dim: int = 128):
-    # Encoder
-    latent_space_dim = latent_space_dim - latent_space_dim % 5
-    x = tf.keras.layers.Input(shape=img_size, name="encoder_input")
-
-    x = tf.keras.layers.Input(shape=img_size, name="encoder_input")
-
-    encoder_conv_layer1 = tf.keras.layers.Conv2D(
-        filters=img_size[-1],
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="encoder_conv_1",
-    )(x)
-    encoder_norm_layer1 = tf.keras.layers.BatchNormalization(name="encoder_norm_1")(
-        encoder_conv_layer1
-    )
-    encoder_activ_layer1 = tf.keras.layers.LeakyReLU(name="encoder_leakyrelu_1")(
-        encoder_norm_layer1
-    )
-    encoder_pool_layer1 = tf.keras.layers.MaxPooling2D(
-        pool_size=(3, 3), padding="same", strides=(1, 1), name="encoder_maxpooling_1"
-    )(encoder_activ_layer1)
-
-    encoder_conv_layer2 = tf.keras.layers.Conv2D(
-        filters=164,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="encoder_conv_2",
-    )(encoder_pool_layer1)
-    encoder_norm_layer2 = tf.keras.layers.BatchNormalization(name="encoder_norm_2")(
-        encoder_conv_layer2
-    )
-    encoder_activ_layer2 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_2")(
-        encoder_norm_layer2
-    )
-    encoder_pool_layer2 = tf.keras.layers.MaxPooling2D(
-        pool_size=(3, 3), padding="same", strides=(2, 2), name="encoder_maxpooling_2"
-    )(encoder_activ_layer2)
-
-    encoder_conv_layer3 = tf.keras.layers.Conv2D(
-        filters=164,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=2,
-        name="encoder_conv_3",
-    )(encoder_pool_layer2)
-    encoder_norm_layer3 = tf.keras.layers.BatchNormalization(name="encoder_norm_3")(
-        encoder_conv_layer3
-    )
-    encoder_activ_layer3 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_3")(
-        encoder_norm_layer3
-    )
-    #encoder_pool_layer3 = tf.keras.layers.MaxPooling2D(
-    #    pool_size=(3, 3), padding="same", strides=(2, 2), name="encoder_maxpooling_3"
-    #)(encoder_activ_layer3)
-
-    encoder_conv_layer4 = tf.keras.layers.Conv2D(
-        filters=56, kernel_size=(3, 3), padding="same", strides=1, name="encoder_conv_4"
-    )(encoder_activ_layer3)
-    encoder_norm_layer4 = tf.keras.layers.BatchNormalization(name="encoder_norm_4")(
-        encoder_conv_layer4
-    )
-    encoder_activ_layer4 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_4")(
-        encoder_norm_layer4
-    )
-    # encoder_pool_layer4 = tf.keras.layers.MaxPooling2D(pool_size=(3, 3), padding="same", strides=(2,2),name="encoder_maxpooling_4")(encoder_activ_layer4)
-
-    encoder_conv_layer5 = tf.keras.layers.Conv2D(
-        filters=28, kernel_size=(3, 3), padding="same", strides=1, name="encoder_conv_5"
-    )(encoder_activ_layer4)
-    encoder_norm_layer5 = tf.keras.layers.BatchNormalization(name="encoder_norm_5")(
-        encoder_conv_layer5
-    )
-    encoder_activ_layer5 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_5")(
-        encoder_norm_layer5
-    )
-
-    shape_before_flatten = tf.keras.backend.int_shape(encoder_activ_layer5)[1:]
-    encoder_flatten = tf.keras.layers.Flatten()(encoder_activ_layer5)
-    encoder_output = tf.keras.layers.Dense(
-        units=latent_space_dim, name="encoder_output"
-    )(encoder_flatten)
-    encoder_output = tf.keras.layers.Reshape((5, -1))(encoder_output)
-
-    encoder = tf.keras.models.Model(x, encoder_output, name="encoder_model")
-
-    decoder_input = tf.keras.layers.Input(
-        shape=(5, int(latent_space_dim / 5)), name="decoder_input"
-    )
-    decoder_flatten1 = tf.keras.layers.Flatten()(decoder_input)
-    decoder_dense_layer1 = tf.keras.layers.Dense(
-        units=np.prod(shape_before_flatten), name="decoder_dense_1"
-    )(decoder_flatten1)
-    decoder_reshape = tf.keras.layers.Reshape(target_shape=shape_before_flatten)(
-        decoder_dense_layer1
-    )
-
-    decoder_conv_tran_layer1 = tf.keras.layers.Conv2DTranspose(
-        filters=28,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_1",
-    )(decoder_reshape)
-    decoder_norm_layer1 = tf.keras.layers.BatchNormalization(name="decoder_norm_1")(
-        decoder_conv_tran_layer1
-    )
-    decoder_activ_layer1 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_1")(
-        decoder_norm_layer1
-    )
-
-    decoder_conv_tran_layer2 = tf.keras.layers.Conv2DTranspose(
-        filters=56,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=2,
-        name="decoder_conv_tran_2",
-    )(decoder_activ_layer1)
-    decoder_norm_layer2 = tf.keras.layers.BatchNormalization(name="decoder_norm_2")(
-        decoder_conv_tran_layer2
-    )
-    decoder_activ_layer2 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_2")(
-        decoder_norm_layer2
-    )
-
-    decoder_conv_tran_layer3 = tf.keras.layers.Conv2DTranspose(
-        filters=164,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=2,
-        name="decoder_conv_tran_3",
-    )(decoder_activ_layer2)
-    decoder_norm_layer3 = tf.keras.layers.BatchNormalization(name="decoder_norm_3")(
-        decoder_conv_tran_layer3
-    )
-    decoder_activ_layer3 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_3")(
-        decoder_norm_layer3
-    )
-
-    decoder_conv_tran_layer4 = tf.keras.layers.Conv2DTranspose(
-        filters=164,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_4",
-    )(decoder_activ_layer3)
-    decoder_norm_layer4 = tf.keras.layers.BatchNormalization(name="decoder_norm_4")(
-        decoder_conv_tran_layer4
-    )
-    decoder_activ_layer4 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_4")(
-        decoder_norm_layer4
-    )
-
-    decoder_conv_tran_layer6 = tf.keras.layers.Conv2DTranspose(
-        filters=img_size[-1],
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_6",
-    )(decoder_activ_layer4)
-    decoder_output = tf.keras.layers.ReLU(name="decoder_leakyrelu_6")(
-        decoder_conv_tran_layer6
-    )
-
-    decoder = tf.keras.models.Model(decoder_input, decoder_output, name="decoder_model")
-
-    ae_input = tf.keras.layers.Input(shape=img_size, name="AE_input")
-    ae_encoder_output = encoder(ae_input)
-    ae_decoder_output = decoder(ae_encoder_output)
-
-    ae = tf.keras.models.Model(ae_input, ae_decoder_output, name="AE_rfi")
-
-    optimizer = optimizer = tf.keras.optimizers.Adam(clipnorm=0.8, clipvalue=0.8, learning_rate=0.001
-    )
-
-    lr_metric = get_lr_metric(optimizer)
-    ae.compile(optimizer, loss=ssim_loss, metrics=["mse", lr_metric])
-
-    return ae, encoder, decoder
-
-
-def create_model_pooling_large(img_size, latent_space_dim: int = 128):
-    # Encoder
-    latent_space_dim = latent_space_dim - latent_space_dim % 5
-    x = tf.keras.layers.Input(shape=img_size, name="encoder_input")
-
-    x = tf.keras.layers.Input(shape=img_size, name="encoder_input")
-
-    encoder_conv_layer1 = tf.keras.layers.Conv2D(
-        filters=img_size[-1],
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="encoder_conv_1",
-    )(x)
-    encoder_norm_layer1 = tf.keras.layers.BatchNormalization(name="encoder_norm_1")(
-        encoder_conv_layer1
-    )
-    encoder_activ_layer1 = tf.keras.layers.LeakyReLU(name="encoder_leakyrelu_1")(
-        encoder_norm_layer1
-    )
-    encoder_pool_layer1 = tf.keras.layers.MaxPooling2D(
-        pool_size=(3, 3), padding="same", strides=(1, 1), name="encoder_maxpooling_1"
-    )(encoder_activ_layer1)
-
-    encoder_conv_layer2 = tf.keras.layers.Conv2D(
-        filters=364,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="encoder_conv_2",
-    )(encoder_pool_layer1)
-    encoder_norm_layer2 = tf.keras.layers.BatchNormalization(name="encoder_norm_2")(
-        encoder_conv_layer2
-    )
-    encoder_activ_layer2 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_2")(
-        encoder_norm_layer2
-    )
-    encoder_pool_layer2 = tf.keras.layers.MaxPooling2D(
-        pool_size=(3, 3), padding="same", strides=(2, 2), name="encoder_maxpooling_2"
-    )(encoder_activ_layer2)
-
-    encoder_conv_layer3 = tf.keras.layers.Conv2D(
-        filters=364,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=2,
-        name="encoder_conv_3",
-    )(encoder_activ_layer2)
-    encoder_norm_layer3 = tf.keras.layers.BatchNormalization(name="encoder_norm_3")(
-        encoder_conv_layer3
-    )
-    encoder_activ_layer3 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_3")(
-        encoder_norm_layer3
-    )
-    encoder_pool_layer3 = tf.keras.layers.MaxPooling2D(
-        pool_size=(3, 3), padding="same", strides=(2, 2), name="encoder_maxpooling_3"
-    )(encoder_activ_layer3)
-
-    encoder_conv_layer4 = tf.keras.layers.Conv2D(
-        filters=26, kernel_size=(3, 3), padding="same", strides=1, name="encoder_conv_4"
-    )(encoder_pool_layer3)
-    encoder_norm_layer4 = tf.keras.layers.BatchNormalization(name="encoder_norm_4")(
-        encoder_conv_layer4
-    )
-    encoder_activ_layer4 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_4")(
-        encoder_norm_layer4
-    )
-    # encoder_pool_layer4 = tf.keras.layers.MaxPooling2D(pool_size=(3, 3), padding="same", strides=(2,2),name="encoder_maxpooling_4")(encoder_activ_layer4)
-
-    encoder_conv_layer5 = tf.keras.layers.Conv2D(
-        filters=28, kernel_size=(3, 3), padding="same", strides=1, name="encoder_conv_5"
-    )(encoder_activ_layer4)
-    encoder_norm_layer5 = tf.keras.layers.BatchNormalization(name="encoder_norm_5")(
-        encoder_conv_layer5
-    )
-    encoder_activ_layer5 = tf.keras.layers.LeakyReLU(name="encoder_activ_layer_5")(
-        encoder_norm_layer5
-    )
-
-    shape_before_flatten = tf.keras.backend.int_shape(encoder_activ_layer5)[1:]
-    encoder_flatten = tf.keras.layers.Flatten()(encoder_activ_layer5)
-    encoder_output = tf.keras.layers.Dense(
-        units=latent_space_dim, name="encoder_output"
-    )(encoder_flatten)
-    encoder_output = tf.keras.layers.Reshape((5, -1))(encoder_output)
-
-    encoder = tf.keras.models.Model(x, encoder_output, name="encoder_model")
-
-    decoder_input = tf.keras.layers.Input(
-        shape=(5, int(latent_space_dim / 5)), name="decoder_input"
-    )
-    decoder_flatten1 = tf.keras.layers.Flatten()(decoder_input)
-    decoder_dense_layer1 = tf.keras.layers.Dense(
-        units=np.prod(shape_before_flatten), name="decoder_dense_1"
-    )(decoder_flatten1)
-    decoder_reshape = tf.keras.layers.Reshape(target_shape=shape_before_flatten)(
-        decoder_dense_layer1
-    )
-
-    decoder_conv_tran_layer1 = tf.keras.layers.Conv2DTranspose(
-        filters=28,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_1",
-    )(decoder_reshape)
-    decoder_norm_layer1 = tf.keras.layers.BatchNormalization(name="decoder_norm_1")(
-        decoder_conv_tran_layer1
-    )
-    decoder_activ_layer1 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_1")(
-        decoder_norm_layer1
-    )
-
-    decoder_conv_tran_layer2 = tf.keras.layers.Conv2DTranspose(
-        filters=256,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=2,
-        name="decoder_conv_tran_2",
-    )(decoder_activ_layer1)
-    decoder_norm_layer2 = tf.keras.layers.BatchNormalization(name="decoder_norm_2")(
-        decoder_conv_tran_layer2
-    )
-    decoder_activ_layer2 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_2")(
-        decoder_norm_layer2
-    )
-
-    decoder_conv_tran_layer3 = tf.keras.layers.Conv2DTranspose(
-        filters=364,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=2,
-        name="decoder_conv_tran_3",
-    )(decoder_activ_layer2)
-    decoder_norm_layer3 = tf.keras.layers.BatchNormalization(name="decoder_norm_3")(
-        decoder_conv_tran_layer3
-    )
-    decoder_activ_layer3 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_3")(
-        decoder_norm_layer3
-    )
-
-    decoder_conv_tran_layer4 = tf.keras.layers.Conv2DTranspose(
-        filters=364,
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_4",
-    )(decoder_activ_layer3)
-    decoder_norm_layer4 = tf.keras.layers.BatchNormalization(name="decoder_norm_4")(
-        decoder_conv_tran_layer4
-    )
-    decoder_activ_layer4 = tf.keras.layers.LeakyReLU(name="decoder_leakyrelu_4")(
-        decoder_norm_layer4
-    )
-
-    decoder_conv_tran_layer6 = tf.keras.layers.Conv2DTranspose(
-        filters=img_size[-1],
-        kernel_size=(3, 3),
-        padding="same",
-        strides=1,
-        name="decoder_conv_tran_6",
-    )(decoder_activ_layer4)
-    decoder_output = tf.keras.layers.ReLU(name="decoder_leakyrelu_6")(
-        decoder_conv_tran_layer6
-    )
-
-    decoder = tf.keras.models.Model(decoder_input, decoder_output, name="decoder_model")
-
-    ae_input = tf.keras.layers.Input(shape=img_size, name="AE_input")
-    ae_encoder_output = encoder(ae_input)
-    ae_decoder_output = decoder(ae_encoder_output)
-
-    ae = tf.keras.models.Model(ae_input, ae_decoder_output, name="AE_rfi")
-
     optimizer = optimizer = tf.keras.optimizers.Adam(
-        amsgrad=True, clipnorm=1, clipvalue=1.0, learning_rate=0.001
+        clipnorm=0.8, clipvalue=0.8, learning_rate=0.001
     )
 
     lr_metric = get_lr_metric(optimizer)
