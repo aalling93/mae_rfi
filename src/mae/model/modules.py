@@ -63,14 +63,14 @@ def create_decoder(
     x = tf.keras.layers.Flatten()(x)
     
     if DECODER_ARCITECTURE_FULL == True:
-        print(image_size)
+        x = tf.keras.layers.Dense(
+                100)(x)
         x = tf.keras.layers.Dense(
                 units=image_size[0] * image_size[1] * image_size[2], activation="sigmoid"
                 )(x)
         outputs = tf.keras.layers.Reshape((image_size[0], image_size[1],image_size[2]))(x)
 
     else:
-        
         x = tf.keras.layers.Dense(
             units=PATCH_SIZE[0] * PATCH_SIZE[1] * image_size[2], activation="sigmoid"
         )(x)

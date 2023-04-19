@@ -1,7 +1,7 @@
 
 from datetime import datetime
 from sys import platform
-
+import glob
 import numpy as np
 import tensorflow_addons as tfa
 from clearml import Task
@@ -10,6 +10,7 @@ import argparse
 from src.mae import CL_Logger as CL_Logger
 from src.mae import *
 from src.mae.CONSTANTS import *
+from src.mae.data import Data
 from src.mae.model._callbacks import *
 from src.mae.model.model_rfi.model_arcitectures import \
     modelPoolingDropout as cae
@@ -19,27 +20,32 @@ if platform == "linux" or platform == "linux2":
     strategy = load_gpu(which=0, memory=60000)
 
 
-train = np.load("data/processed/train_zm_jsd.npy", allow_pickle=True)
-test = np.load("data/processed/train_zm_jsd.npy", allow_pickle=True)
+folder = "data/processed/tryanew"
+test_folders = glob.glob("f{folder}/*aiTest/npy/*")
+test_folders.extend(glob.glob(f"{folder}/*elTest/npy/*"))
+test_folders.extend(glob.glob(f"{folder}/*anTest/npy/*"))
+test_folders.extend(glob.glob(f"{folder}/*rkTest/npy/*"))
 
-train = np.array(
-    [
-        center_crop(im, [500, 340])
-        for im in train
-        if (im.shape[0] >= 340 and im.shape[1] >= 500)
-    ]
+
+train_folders = glob.glob(f"{folder}/*aiTrain/npy/*")
+train_folders.extend(glob.glob(f"{folder}/*elTrain/npy/*"))
+train_folders.extend(glob.glob(f"{folder}/*anTrain/npy/*"))
+train_folders.extend(glob.glob(f"{folder}/*rkTrain/npy/*"))
+
+
+
+data = Data()
+data.load_data(
+    train_data=train_folders,
+    test_data=test_folders,
+    imsize=IMAGE_SIZE,
+    only_VH=ONLY_VH,
+    test_samples = 100
 )
 
-test = np.array(
-    [
-        center_crop(im, [500, 340])
-        for im in test
-        if (im.shape[0] >= 340 and im.shape[1] >= 500)
-    ]
-)
 
-train = train[0:5]
-test = test[0:6]
+#train = data.train
+#test = data.test
 
 BATCH_SIZE = 5
 EPOCHS = 16
@@ -48,11 +54,6 @@ LEARNING_RATE = 0.01
 LEARNING_RATE_WARM_UP = LEARNING_RATE * 1e-4
 
 
-try:
-    task.close()
-except:
-    pass
-
 
 for latent in [25, 75, 125, 250, 350, 500]:
     name_append = datetime.now().strftime("%d_%m_%Y_%H_%M")
@@ -60,7 +61,7 @@ for latent in [25, 75, 125, 250, 350, 500]:
     task = Task.init(
         project_name="RFI_mae", task_name=f"RFI_reconstruction_{name_append}"
     )
-    ae_model, __, __ = cae(img_size=train[0].shape, latent_space_dim=latent)
+    ae_model, __, __ = cae(img_size=data.train[0].shape, latent_space_dim=latent)
     ae_model._name = f"RFI_reconstruction_{name_append}"
     os.makedirs(f"../models/{ae_model.name}", exist_ok=True)
     os.makedirs(f"../models/{ae_model.name}/logs", exist_ok=True)
@@ -79,8 +80,8 @@ for latent in [25, 75, 125, 250, 350, 500]:
         embeddings_freq=1,
     )
     # train_images,test_images
-    ssim_callback = SSIMMonitor_ae(train, test)
-    debug = np.vstack((train[-11:], test[-10:]))
+    ssim_callback = SSIMMonitor_ae(data.train, data.test)
+    debug = np.vstack((data.train[-11:], data.test[-10:]))
     debug_callback = TrainMonitor_ae(epoch_interval=5, test_images=debug)
 
     best_model_file = f"../models/{ae_model.name}/best_model_{ae_model.name}"
@@ -115,7 +116,7 @@ for latent in [25, 75, 125, 250, 350, 500]:
     )
 
     #### Optimizer
-    total_steps = int((len(train) / BATCH_SIZE) * EPOCHS)
+    total_steps = int((len(data.train) / BATCH_SIZE) * EPOCHS)
     # Compute the number of warmup batches or steps.
     warmup_steps = int(total_steps * WARMUP_EPOCH_PERCENTAGE)
 
@@ -158,8 +159,8 @@ for latent in [25, 75, 125, 250, 350, 500]:
     parms = {
         "data": "../data/processed/train_zm_jsd.npy",
         "crop": "center",
-        "train size": train.shape,
-        "test size": test.shape,
+        "train size": data.train.shape,
+        "test size": data.test.shape,
         "debug size": debug.shape,
         "debug comment": "11 train 10 test",
         "latent space": latent,
@@ -172,8 +173,8 @@ for latent in [25, 75, 125, 250, 350, 500]:
     task.connect(WarmUpCosineDecayScheduler_parms, "optimizer")
 
     ae_model.fit(
-        train,
-        train,
+        data.train,
+        data.train,
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
         shuffle=True,
@@ -181,8 +182,13 @@ for latent in [25, 75, 125, 250, 350, 500]:
         callbacks=callbacks,
     )
 
-    loss = ae_model.evaluate(train)
+    val_loss = ae_model.evaluate(data.val)
+    train_loss = ae_model.evaluate(data.train)
+    test_loss = ae_model.evaluate(data.test)
 
-    results = {"loss [loss, mae, lr]": loss, "latent space": latent}
+    results = {"latent space": latent,
+               "Validataition loss": val_loss, 
+               "Training loss": train_loss,
+                "Testing loss": test_loss }
     task.connect(results, "results")
     task.close()

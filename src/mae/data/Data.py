@@ -1,8 +1,7 @@
-import numpy as np
 import tensorflow as tf
 
 from ..CONSTANTS import *
-from .data_util import _load_data
+from .data_loader import _load_data
 
 
 class Data:
@@ -18,46 +17,40 @@ class Data:
 
     def load_data(
         self,
-        train_data: str = "../data/processed/train_zm_jsd.npy",
-        test_data: str = "",
+        train_data,
+        test_data,
         imsize: tuple = (340, 500, 2),
-        only_VH:bool=False,
-        test_samples:int=100,
+        only_VH: bool = False,
+        test_samples: int = 100,
     ):
-        print(imsize)
-        
-        train = _load_data(train_data,crop=True,imsize=imsize)
-        self.train = train[0:10]
-        del train
-        if only_VH:
-            self.train = self.train[:,:,:,1:]
+
+        self.train,self.val,self.test = _load_data(
+            train=train_data,
+            test=test_data,
+            imsize=imsize,
+            only_VH=only_VH,
+            test_samples=test_samples,
+        )
+
+        if self.train.max()>1.1:
+            self.train = self.train/255.0
+            self.test = self.test/255.0
+            self.val = self.val/255.0
+
+        self.train = self.train[0:30]
+        self.test = self.test[0:30]
+        self.val = self.val[0:30]
 
 
         train_ds = tf.data.Dataset.from_tensor_slices(self.train)
         self.train_ds = train_ds.shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(AUTO)
 
+        val_ds = tf.data.Dataset.from_tensor_slices(self.val)
+        self.val_ds = val_ds.shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(AUTO)
 
-        if len(test_data)>0:
-            test = _load_data(test_data,crop=True,imsize=imsize)
-            self.test  = test[:20] #just picking 20 images.. Just to use less memory.. Could do whatever.
-            del test
-            if only_VH:
-                self.test = self.test[:test_samples,:,:,1:]
+        test_ds = tf.data.Dataset.from_tensor_slices(self.test)
+        self.test_ds = test_ds.shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(AUTO)
 
-            test_ds = tf.data.Dataset.from_tensor_slices(self.test)
-            self.test_ds = test_ds.shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(AUTO)
-
-        print(f"Data loaded with {self.train.shape[-1]} polarization(s)")
-
-        
-        
-        
-        
-        
+        del test_ds, val_ds, train_ds
 
         return None
-    
-
-    
-
-

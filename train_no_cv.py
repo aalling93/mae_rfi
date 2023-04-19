@@ -5,7 +5,7 @@ TRAINING SCRIPT.
 
 import argparse
 from sys import platform
-
+import glob
 import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -65,15 +65,7 @@ if args.verbose > 0:
     )
 
 
-# other parms
-ENC_TRANSFORMER_UNITS = [
-    ENC_PROJECTION_DIM * 2,
-    ENC_PROJECTION_DIM,
-]  # Size of the transformer layers.
-DEC_TRANSFORMER_UNITS = [
-    DEC_PROJECTION_DIM * 2,
-    DEC_PROJECTION_DIM,
-]
+
 
 
 ####################### DONE WITH ARGS ############################
@@ -81,7 +73,6 @@ if platform == "linux" or platform == "linux2":
     strategy = load_gpu(which=int(args.GPU), memory=int(args.GPU_memory))
 
 
-# name_append = datetime.now().strftime("%d_%m_%Y_%H_%M")
 model_name = f"{args.MODEL_NAME}" + "_" + args.NAME_APPEND
 task = Task.create(project_name="RFI_mae", task_name=f"{model_name}")
 
@@ -90,10 +81,28 @@ task = Task.create(project_name="RFI_mae", task_name=f"{model_name}")
 if args.verbose > 0:
     print("\nloading data")
 
-data = Data()
-data.load_data(train_data= "data/processed/train_zm_d.npy",
-               test_data = "data/processed/train_zm_d.npy")
+
+
 np.random.seed(args.seed)
+folder = "data/processed/tryanew"
+test_folders = glob.glob("f{folder}/*aiTest/npy/*")
+test_folders.extend(glob.glob(f"{folder}/*elTest/npy/*"))
+test_folders.extend(glob.glob(f"{folder}/*anTest/npy/*"))
+test_folders.extend(glob.glob(f"{folder}/*rkTest/npy/*"))
+train_folders = glob.glob(f"{folder}/*aiTrain/npy/*")
+train_folders.extend(glob.glob(f"{folder}/*elTrain/npy/*"))
+train_folders.extend(glob.glob(f"{folder}/*anTrain/npy/*"))
+train_folders.extend(glob.glob(f"{folder}/*rkTrain/npy/*"))
+
+data = Data()
+data.load_data(
+    train_data=train_folders,
+    test_data=test_folders,
+    imsize=IMAGE_SIZE,
+    only_VH=ONLY_VH,
+    test_samples = 100
+)
+
 
 
 if args.upload_data == True:
@@ -103,11 +112,11 @@ if args.upload_data == True:
 task = Task.init(project_name="RFI_mae", task_name=f"{model_name}")
 task.connect(args, "args")
 
-clearml_upload_image(data.train[0:10])
+
 
 
 if args.verbose > 0:
-    print(f"\nNumber of training examples: {len(data.train)} \nNumber of test example: {len(data.test)}\nTime: {args.NAME_APPEND}")
+    print(f"\nNumber of training examples: {data.train.shape} \nNumber of test example: {data.test.shape}\nTime: {args.NAME_APPEND}")
 
 
 if args.verbose > 0:
@@ -125,7 +134,7 @@ if args.verbose > 0:
 decoder = create_decoder(
     num_layers=args.DEC_LAYERS,
     num_heads=args.DEC_NUM_HEADS,
-    image_size=INPUT_SHAPE,
+    image_size=IMAGE_SIZE,
     dropout=args.DROPOUT_RATE,
     num_patches=NUM_PATCHES,
     enc_projection_dim=args.ENC_PROJECTION_DIM,
@@ -211,23 +220,40 @@ mae_model.compile(
     metrics=["mae", learning_rate_metric],
 )
 
-
+debug = np.vstack((data.train[-11:], data.test[-10:]))
 train_callbacks = get_callbacks(
     mae_model,
     save_path=args.model_folder,
     epoch_interval=5,
-    test_images=data.train[:10],
+    test_images=debug,
 )
 train_callbacks.append(cosine_warm_up_lr)
+
+
+
+
+model_parms = {
+        "model name": mae_model._name,
+        "decoder name": mae_model.decoder.name,
+        "decoder": get_model_summary(mae_model.decoder),
+        "encoder name": mae_model.encoder.name,
+        "encoder": get_model_summary(mae_model.encoder),
+
+}
+task.connect(model_parms, "model summary")
+
+
+print(data.train_ds)
+print(data.val_ds)
 
 if args.verbose > 0:
     print("\nTraining model")
 history = mae_model.fit(
     data.train_ds,
     epochs=args.EPOCHS,
-    validation_data=data.train_ds,
+    validation_data=data.val_ds,
     workers = 25,
-    max_queue_size = 50,
+    max_queue_size = 10,
     callbacks=train_callbacks,
 )
 
@@ -238,6 +264,14 @@ if args.verbose > 0:
 
 
 ####
-loss, mae = mae_model.evaluate(data.train_ds)
-print(f"Loss: {loss:.2f}")
-print(f"MAE: {mae:.2f}")
+
+val_loss = mae_model.evaluate(data.val_ds)
+train_loss = mae_model.evaluate(data.train_ds)
+test_loss = mae_model.evaluate(data.test_ds)
+
+results = {"model": mae_model.name,
+               "Validataition loss": val_loss, 
+               "Training loss": train_loss,
+                "Testing loss": test_loss }
+task.connect(results, "results")
+task.close()

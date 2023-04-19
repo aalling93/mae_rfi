@@ -168,7 +168,7 @@ class TrainMonitor(tf.keras.callbacks.Callback):
                 
                 
                 
-                if original_image.shape[-1]==2:
+                if self.test_images.shape[-1]==2:
                     
                     clearml_plot_examples(
                     original_image, masked_image, reconstructed_image, epoch, img_ix
@@ -402,6 +402,17 @@ class TrainMonitor_ae(tf.keras.callbacks.Callback):
 
 
 
-                clearml_plot_org_latent_recon(
+                #clearml_plot_org_latent_recon(
+                #    self.test_images[img_ix], encoded[0], decoded[0], epoch, img_ix
+                #)
+
+                #print(encoded.shape)
+                #print(encoded.shape)
+                if self.test_images.shape[-1]==2:
+                    clearml_plot_org_latent_recon(
                     self.test_images[img_ix], encoded[0], decoded[0], epoch, img_ix
-                )
+                    )
+                else:
+                    clearml_plot_org_latent_recon_single_pil(
+                    self.test_images[img_ix][:,:,0], encoded[0], decoded[0][:,:,0], epoch, img_ix
+                     )

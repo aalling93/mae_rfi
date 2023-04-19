@@ -158,6 +158,48 @@ def clearml_plot_org_latent_recon(original, masked, reconstruct, epoch, img_ix):
 
 
 
+def clearml_plot_org_latent_recon_single_pil(original, latent, reconstruct, epoch, img_ix):
+    
+    fig = plt.figure(figsize=(15, 10))
+    plt.subplot(2, 3, 1)
+    im = plt.imshow(original[:, :], vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Original: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 2)
+    im = plt.imshow(latent[:, :], cmap="gray")
+    plt.title(f"{img_ix} latent space : {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 3)
+    im = plt.imshow(reconstruct[:, :], vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Reconstructed: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 4)
+    im = plt.imshow(abs(original-reconstruct), cmap="gray")
+    plt.title(f"{img_ix} Difference: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 6)
+    im = plt.imshow(abs(original-reconstruct)-abs(original-reconstruct).min(), cmap="gray")
+    plt.title(f"{img_ix} Difference 2: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    Task.current_task().get_logger().report_matplotlib_figure(
+        title=f"Img {img_ix} Debug Samples",
+        series="",
+        figure=fig,
+        report_image=True,
+        iteration=epoch,
+    )
+
+
 
 def clearml_plot_graph(
     values,

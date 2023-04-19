@@ -91,6 +91,9 @@ task = Task.create(project_name="RFI_mae", task_name=f"{model_name}")
 if args.verbose > 0:
     print("\nloading data")
 
+
+np.random.seed(args.seed)
+
 data = Data()
 data.load_data(
     train_data="data/processed/train_zm_d.npy",
@@ -98,7 +101,7 @@ data.load_data(
     imsize=IMAGE_SIZE,
     only_VH=ONLY_VH,
 )
-np.random.seed(args.seed)
+
 
 
 task = Task.init(project_name="RFI_mae", task_name=f"{model_name}")
