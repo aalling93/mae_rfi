@@ -2,6 +2,7 @@ import tensorflow as tf
 
 from ..CONSTANTS import *
 from .data_loader import _load_data
+import numpy as np
 
 
 class Data:
@@ -32,7 +33,7 @@ class Data:
             test_samples=test_samples,
         )
 
-        if self.train.max()>1.1:
+        if np.max(self.train[0][:,:,0])>1.1:
             self.train = self.train/255.0
             self.test = self.test/255.0
             self.val = self.val/255.0

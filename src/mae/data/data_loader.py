@@ -1,18 +1,20 @@
 import numpy as np
 from .data_util import center_crop
 
+
 def _load_and_crop_file(
     data: str = "", crop: bool = True, imsize: tuple = (340, 500, 2)
 ):
-    
-    data = np.load(data, allow_pickle=True)
-    if (data.shape[0] >= imsize[0] and data.shape[1] >= imsize[1]):
+    img = np.load(data, allow_pickle=True)
+    if img.shape[0] >= imsize[0] and img.shape[1] >= imsize[1]:
         if crop == True:
-            data = np.array(center_crop(data, [imsize[1], imsize[0]]))
-            return data
-        
-    else:
-        return None
+            img = np.array([center_crop(img, [imsize[0], imsize[1]])])
+        return img
+
+
+def _crop_file(data, crop: bool = True, imsize: tuple = (340, 500, 2)):
+    data = np.array([center_crop(data, [imsize[0], imsize[1]])])
+    return data[0, :, :, :]
 
 
 def _load_list_of_filenames(
@@ -22,15 +24,26 @@ def _load_list_of_filenames(
     only_VH: bool = False,
     test_samples: int = 100,
 ):
-    print(train_data[0])
+    images = np.array([np.load(im) for im in train_data])
     all_train_images = np.array(
-        [_load_and_crop_file(tra, crop=True, imsize=imsize) for tra in train_data]
+        [
+            _crop_file(im)
+            for im in images
+            if im.shape[0] >= imsize[0] and im.shape[1] >= imsize[1]
+        ]
     )
+
+    test_data = np.array([np.load(im) for im in test_data])
     all_test_images = np.array(
-        [_load_and_crop_file(tes, crop=True, imsize=imsize) for tes in test_data]
+        [
+            _crop_file(im)
+            for im in test_data
+            if im.shape[0] >= imsize[0] and im.shape[1] >= imsize[1]
+        ]
     )
+
     np.random.shuffle(all_train_images)
-    print(all_train_images.shape)
+
     if only_VH:
         all_train_images = all_train_images[:, :, :, 1:]
         all_test_images = all_test_images[:, :, :, 1:]

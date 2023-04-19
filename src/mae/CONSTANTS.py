@@ -8,7 +8,7 @@ NAME_APPEND = datetime.now().strftime("%d_%m_%Y_%H_%M")
 
 # DATA
 INPUT_SHAPE = (340, 500, 2)
-IMAGE_SIZE = (60, 100, 1)
+IMAGE_SIZE = (340, 500, 2)
 DATA_FOLDER = "data/processed/train_zm_jsd.npy"
 DATA_SPLIT = 0.8
 RANDOM_CROP = True

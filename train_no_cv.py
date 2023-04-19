@@ -94,6 +94,7 @@ train_folders.extend(glob.glob(f"{folder}/*elTrain/npy/*"))
 train_folders.extend(glob.glob(f"{folder}/*anTrain/npy/*"))
 train_folders.extend(glob.glob(f"{folder}/*rkTrain/npy/*"))
 
+print(len(train_folders))
 data = Data()
 data.load_data(
     train_data=train_folders,
