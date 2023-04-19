@@ -7,35 +7,43 @@ MODEL_FOLDER = f"models"
 NAME_APPEND = datetime.now().strftime("%d_%m_%Y_%H_%M")
 #
 BUFFER_SIZE = 1024
-BATCH_SIZE = 10
+BATCH_SIZE = 1
 AUTO = tf.data.AUTOTUNE
-INPUT_SHAPE = (340, 500, 2)
-NUM_CLASSES = 10
+
+
+NUM_CLASSES = 1
 SEED = 42
 DATA_FOLDER = "data/processed/train_zm_jsd.npy"
 DATA_SPLIT = 0.8
+RANDOM_CROP = True  # cropping input data to be smaller (160,250). Random in training.
+INPUT_SHAPE = (340, 500, 2)
+ONLY_VH = True
+IMAGE_SIZE = (160, 300, 1)
+PATCH_SIZE = (
+    int(IMAGE_SIZE[0] / 10),
+    int(IMAGE_SIZE[1] / 10),
+)  # Size of the patches to be extracted from the input images.
 VERBOSE = 1
 GPU_NUMBER = 1
 GPU_MEMORY = 40000
 # OPTIMIZER
 LEARNING_RATE = 5e-3
-LEARNING_RATE_WARM_UP = LEARNING_RATE*1e-8
+LEARNING_RATE_WARM_UP = LEARNING_RATE * 1e-8
 WEIGHT_DECAY = 1e-4
 # PRETRAINING
 EPOCHS = 1000
 WARMUP_EPOCH_PERCENTAGE = 0.05
 # AUGMENTATION
-IMAGE_SIZE = (340, 500)
-PATCH_SIZE = (34, 50)  # Size of the patches to be extracted from the input images.
 
 
 NUM_PATCHES = int(
     int(IMAGE_SIZE[0] / PATCH_SIZE[0]) * int(IMAGE_SIZE[1] / PATCH_SIZE[1])
 )
+
 MASK_PROPORTION = 0.60  # We have found 75% masking to give us the best results.
 
 ##DECODER
-DECODER_ARCITECTURE_FULL = False
+DECODER_ARCITECTURE_FULL = True
 # ENCODER and DECODER
 LAYER_NORM_EPS = 1e-6
 ENC_PROJECTION_DIM = 128

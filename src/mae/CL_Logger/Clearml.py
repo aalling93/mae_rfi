@@ -72,6 +72,45 @@ def clearml_plot_examples(original, masked, reconstruct, epoch, img_ix):
 
 
 
+def clearml_plot_one_polari_all(original, masked,latent,reconstruct, epoch, img_ix):
+    
+    fig = plt.figure(figsize=(15, 10))
+    plt.subplot(2, 3, 1)
+    im = plt.imshow(original, vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Original VH: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 2)
+    im = plt.imshow(masked, vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Masked VH: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 3)
+    im = plt.imshow(reconstruct, vmin=0, vmax=1, cmap="gray")
+    plt.title(f"{img_ix} Reconstructed VH: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    plt.subplot(2, 3, 5)
+    im = plt.imshow(latent, cmap="gray")
+    plt.title(f"{img_ix} latent space: {epoch:03d}")
+    cb = plt.colorbar(im, shrink=0.9, orientation="vertical")
+    cb.set_label("Intensity")
+
+    
+
+    Task.current_task().get_logger().report_matplotlib_figure(
+        title=f"Img {img_ix} Debug Samples",
+        series="",
+        figure=fig,
+        report_image=True,
+        iteration=epoch,
+    )
+
+
+
 
 
 

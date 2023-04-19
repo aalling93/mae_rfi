@@ -22,15 +22,13 @@ class PatchEncoder(tf.keras.layers.Layer):
         # distribution.
         self.mask_token = tf.Variable(
             tf.random.normal(
-                [1, self.patch_size[0] * self.patch_size[1] * INPUT_SHAPE[2]]
+                [1, self.patch_size[0] * self.patch_size[1] * IMAGE_SIZE[2]]
             ),
             trainable=True,
         )
 
     def build(self, input_shape):
         (_, self.num_patches, self.patch_area) = input_shape
-        print("number of patches ", self.num_patches)
-
         # Create the projection layer for the patches.
         self.projection = tf.keras.layers.Dense(units=self.projection_dim)
 

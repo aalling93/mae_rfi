@@ -154,18 +154,34 @@ class TrainMonitor(tf.keras.callbacks.Callback):
                 sim_vv = tf.image.ssim(
                     original_image[:, :, 0:1], reconstructed_image[:, :, 0:1], 1.0
                 )
-                sim_vh = tf.image.ssim(
-                    original_image[:, :, 1:], reconstructed_image[:, :, 1:], 1.0
-                )
-                ssims = (sim_vv + sim_vh) / 2
+                clearml_log_scalar(sim_vv, epoch, "pol", "SSIM")
+                try:
+                    sim_vh = tf.image.ssim(
+                        original_image[:, :, 1:], reconstructed_image[:, :, 1:], 1.0
+                    )
+                    ssims = (sim_vv + sim_vh) / 2
+                    clearml_log_scalar(sim_vv, epoch, "vh", "SSIM")
+                    clearml_log_scalar(ssims, epoch, "mean", "SSIM")
+                except:
+                    pass
 
-                clearml_log_scalar(sim_vv, epoch, "vv", "SSIM")
-                clearml_log_scalar(sim_vh, epoch, "vh", "SSIM")
-                clearml_log_scalar(ssims, epoch, "mean", "SSIM")
-
-                clearml_plot_examples(
+                
+                
+                
+                if original_image.shape[-1]==2:
+                    
+                    clearml_plot_examples(
                     original_image, masked_image, reconstructed_image, epoch, img_ix
-                )
+                    )
+                else:
+                    
+                    clearml_plot_one_polari_all(original_image[:,:,0],
+                                                masked_image[:,:,0],
+                                                reconstructed_image[:,:,0],
+                                                test_decoder_inputs[idx],
+                                                epoch,
+                                                img_ix
+                                                )
 
 
 class saveModel(tf.keras.callbacks.Callback):

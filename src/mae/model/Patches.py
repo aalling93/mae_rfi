@@ -9,9 +9,9 @@ class Patches(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.patch_size = patch_size
         # Assuming the image has three channels each patch would be
-        # of size (patch_size, patch_size, 3).
+        # of size (patch_size, patch_size, pol).
         self.resize = tf.keras.layers.Reshape(
-            (-1, self.patch_size[0] * self.patch_size[1] * INPUT_SHAPE[2])
+            (-1, self.patch_size[0] * self.patch_size[1] * IMAGE_SIZE[2])
         )
 
     def call(self, images):
@@ -45,7 +45,7 @@ class Patches(tf.keras.layers.Layer):
         for i, patch in enumerate(patches[idx]):
             ax = plt.subplot(n, n, i + 1)
             patch_img = tf.reshape(
-                patch, (self.patch_size[0], self.patch_size[1], INPUT_SHAPE[2])
+                patch, (self.patch_size[0], self.patch_size[1], IMAGE_SIZE[2])
             )
             plt.imshow(patch_img[:, :, 1])
             plt.axis("off")
@@ -62,7 +62,7 @@ class Patches(tf.keras.layers.Layer):
         num_patches = patch.shape[0]
         n = int(np.sqrt(num_patches))
         patch = tf.reshape(
-            patch, (num_patches, self.patch_size[0], self.patch_size[1], INPUT_SHAPE[2])
+            patch, (num_patches, self.patch_size[0], self.patch_size[1], IMAGE_SIZE[2])
         )
         rows = tf.split(patch, n, axis=0)
         rows = [tf.concat(tf.unstack(x), axis=1) for x in rows]

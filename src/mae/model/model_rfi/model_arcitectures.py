@@ -237,7 +237,8 @@ def modelPoolingDropout(img_size, latent_space_dim: int = 128):
         strides=1,
         name="decoder_conv_tran_6",
     )(decoder_norm_layer4)
-    decoder_output = tf.keras.layers.ReLU(name="decoder_leakyrelu_6")(
+
+    decoder_output = tf.keras.layers.Softmax(name="decoder_leakyrelu_6")(
         decoder_conv_tran_layer6
     )
 
