@@ -35,7 +35,7 @@ DECODER_ARCITECTURE_FULL = True
 # ENCODER and DECODER
 LAYER_NORM_EPS = 1e-6
 ENC_PROJECTION_DIM = 128
-DEC_PROJECTION_DIM = 64
+DEC_PROJECTION_DIM = 28
 ENC_NUM_HEADS = 4
 ENC_LAYERS = 3
 DEC_NUM_HEADS = 4
@@ -43,7 +43,7 @@ DROPOUT_RATE = 0.1
 DEC_LAYERS = (
     2  # The decoder is lightweight but should be reasonably deep for reconstruction.
 )
-DEC_LAYERS = 1
+DEC_LAYERS = 2
 
 
 
