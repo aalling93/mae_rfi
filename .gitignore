@@ -38,7 +38,8 @@ data/processed
 data/raw
 data/results
 
-
+waste/*
+!waste/.gitkeep
 examples/*
 
 develop-eggs/
