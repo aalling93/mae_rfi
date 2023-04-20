@@ -1,15 +1,29 @@
 # You need Python3..
 
+# start by installting cuda and cudnn requ
+# python3 -m pip install --upgrade pip
+# conda install -c conda-forge cudatoolkit=11.6.0
+# python3 -m pip install nvidia-cudnn-cu11==8.2.1.32
+# then install:
 # external requirements
-numpy
+# python3 -m pip install -r re...
+numpy==1.19.5
 matplotlib
 jupyter
 jupyterlab
-ipython
-ipykernel
+ipython==8.2.0 
+ipykernel==6.9.1 
 clearml
-plotly
-tensorflow
-tensorflow-addons
-keras
-pandas
+plotly==5.7.0
+tensorflow==2.6.0
+tensorflow-addons==0.20.0 
+tensorflow-estimator==2.6.0
+tensorflow-base == 2.6.0
+tensorflow-gpu == 2.6.0
+tensorflow-probability==0.13.0
+keras==2.6.0
+pandas==1.4.2
+
+
+# CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib

@@ -15,6 +15,14 @@ from src.mae.model._callbacks import *
 from src.mae.model.model_rfi.model_arcitectures import \
     modelPoolingDropout as cae
 
+
+parser = argparse.ArgumentParser(description="Training RFI cae")
+parser.add_argument("-BATCH_SIZE","--BATCH_SIZE",help="Batch size integer input.",default=BATCH_SIZE,type=int,)
+parser.add_argument("-EPOCHS", "--EPOCHS", help="EPOCHS", default=EPOCHS, type=int)
+parser.add_argument("-GPU_MEMORY", "--GPU_MEMORY", help="GPU_MEMORY", default=GPU_MEMORY, type=int)
+
+args = parser.parse_args()
+
 ####################### DONE WITH ARGS ############################
 if platform == "linux" or platform == "linux2":
     strategy = load_gpu(which=0, memory=60000)
@@ -182,9 +190,40 @@ for latent in [25, 75, 125, 250, 350, 500]:
     train_loss = ae_model.evaluate(data.train)
     test_loss = ae_model.evaluate(data.test)
 
+    val_recon = ae_model.predict(data.val)
+    train_recon = ae_model.predict(data.train)
+    test_recon = ae_model.predict(data.test)
+
+    val_ssim = tf.image.ssim(
+                    data.val,
+                    val_recon,
+                    1).numpy().mean()
+    test_ssim = tf.image.ssim(
+                    data.test,
+                    test_recon,
+                    1).numpy().mean()
+    train_ssim = tf.image.ssim(
+                    data.train,
+                    train_recon,
+                    1).numpy().mean()
+
+    val_mse = ((data.val - val_recon)**2).mean()
+    train_mse= ((data.train - train_recon)**2).mean()
+    test_mse = ((data.test - test_recon)**2).mean()
+
+
     results = {"latent space": latent,
-               "Validataition loss": val_loss, 
-               "Training loss": train_loss,
-                "Testing loss": test_loss }
+               "Validataition loss eval": val_loss, 
+                "Training loss eval": train_loss,
+                "Testing loss eval": test_loss,
+                "Validataition mean ssim ": val_ssim, 
+                "Training mean ssim ": train_ssim,
+                "Testing mean ssim ": test_ssim,
+                "Validataition mse ": val_mse, 
+                "Training mse ": train_mse,
+                "Testing mse ": test_mse}
+    
+    
+
     task.connect(results, "results")
     task.close()
