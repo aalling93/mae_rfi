@@ -85,7 +85,7 @@ if args.verbose > 0:
 
 np.random.seed(args.seed)
 folder = "data/processed/tryanew"
-test_folders = glob.glob("f{folder}/*aiTest/npy/*")
+test_folders = glob.glob(f"{folder}/*aiTest/npy/*")
 test_folders.extend(glob.glob(f"{folder}/*elTest/npy/*"))
 test_folders.extend(glob.glob(f"{folder}/*anTest/npy/*"))
 test_folders.extend(glob.glob(f"{folder}/*rkTest/npy/*"))
