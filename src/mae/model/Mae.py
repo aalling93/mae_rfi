@@ -1,9 +1,44 @@
+"""
+This module defines the MaskedAutoencoder class which is used for training and testing a Masked Autoencoder Model.
+
+Classes:
+
+MaskedAutoencoder: A class used for training and testing a Masked Autoencoder model.
+Functions:
+
+None
+"""
+
 import tensorflow as tf
 from ..CONSTANTS import *
 from .modules import *
 
 
 class MaskedAutoencoder(tf.keras.Model):
+    """
+    A class used for training and testing a Masked Autoencoder model.
+    Args:
+    - train_augmentation_model (tf.keras.Model): The model used for data augmentation during training.
+    - test_augmentation_model (tf.keras.Model): The model used for data augmentation during testing.
+    - patch_layer (tf.keras.layers.Layer): The layer used for patching the images.
+    - patch_encoder (tf.keras.Model): The model used for encoding the patches.
+    - encoder (tf.keras.Model): The model used for encoding the input.
+    - decoder (tf.keras.Model): The model used for decoding the encoded input.
+
+    Attributes:
+    - train_augmentation_model (tf.keras.Model): The model used for data augmentation during training.
+    - test_augmentation_model (tf.keras.Model): The model used for data augmentation during testing.
+    - patch_layer (tf.keras.layers.Layer): The layer used for patching the images.
+    - patch_encoder (tf.keras.Model): The model used for encoding the patches.
+    - encoder (tf.keras.Model): The model used for encoding the input.
+    - decoder (tf.keras.Model): The model used for decoding the encoded input.
+
+    Methods:
+    - calculate_loss(images, test=False): Calculates the loss of the model.
+    - train_step(images): Performs one training step.
+    - test_step(images): Performs one testing step.
+    """
+
     def __init__(
         self,
         train_augmentation_model,
@@ -14,6 +49,19 @@ class MaskedAutoencoder(tf.keras.Model):
         decoder,
         **kwargs,
     ):
+        """
+        Initializes the MaskedAutoencoder class.
+
+        Args:
+        - train_augmentation_model (tf.keras.Model): The model used for data augmentation during training.
+        - test_augmentation_model (tf.keras.Model): The model used for data augmentation during testing.
+        - patch_layer (tf.keras.layers.Layer): The layer used for patching the images.
+        - patch_encoder (tf.keras.Model): The model used for encoding the patches.
+        - encoder (tf.keras.Model): The model used for encoding the input.
+        - decoder (tf.keras.Model): The model used for decoding the encoded input.
+        - **kwargs: Additional keyword arguments to be passed to the super class.
+        """
+
         super().__init__(**kwargs)
         self.train_augmentation_model = train_augmentation_model
         self.test_augmentation_model = test_augmentation_model
@@ -23,6 +71,23 @@ class MaskedAutoencoder(tf.keras.Model):
         self.decoder = decoder
 
     def calculate_loss(self, images, test=False):
+        """
+        Calculates the loss for the masked autoencoder model.
+
+        Args:
+            images (tf.Tensor): Input tensor of shape (batch_size, height, width, channels).
+            test (bool, optional): Flag indicating if the function is called during testing. Defaults to False.
+
+        Returns:
+            Tuple[tf.Tensor, tf.Tensor, tf.Tensor]: A tuple of three tensors:
+                - total_loss: Scalar tensor representing the total loss of the model.
+                - loss_patch: Tensor of shape (batch_size, num_masked_patches, patch_height, patch_width, channels) representing the patches of the input images that were masked during training.
+                - loss_output: Tensor of shape (batch_size, num_masked_patches, patch_height, patch_width, channels) representing the output patches of the decoder network corresponding to the masked patches in the input images.
+
+        Raises:
+            ValueError: If images is not a 4D tensor or if test is not a boolean value.
+
+        """
         # Augment the input images.
         if test:
             augmented_images = self.test_augmentation_model(images)
@@ -52,6 +117,7 @@ class MaskedAutoencoder(tf.keras.Model):
         decoder_outputs = self.decoder(decoder_inputs)
         decoder_patches = self.patch_layer(decoder_outputs)
 
+        # Compute the patch loss and output loss.
         loss_patch = tf.gather(patches, mask_indices, axis=1, batch_dims=1)
         loss_output = tf.gather(decoder_patches, mask_indices, axis=1, batch_dims=1)
 
@@ -61,6 +127,15 @@ class MaskedAutoencoder(tf.keras.Model):
         return total_loss, loss_patch, loss_output
 
     def train_step(self, images):
+        """
+        Performs a single training step on a batch of input images.
+
+        Args:
+            images: A batch of input images in the shape of (batch_size, image_height, image_width, num_channels).
+
+        Returns:
+            A dictionary containing the metrics computed during the training step.
+        """
         with tf.GradientTape() as tape:
             total_loss, loss_patch, loss_output = self.calculate_loss(images)
 

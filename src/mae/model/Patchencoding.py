@@ -1,9 +1,60 @@
+"""
+This script contains the PatchEncoder class that is used in image transformer models.
+The PatchEncoder class encodes image patches into projection vectors with positional embeddings.
+The class also allows for masking of some patches in the image, which can be useful in training the decoder.
+
+Functions:
+- init: Initializes the PatchEncoder object with the specified parameters.
+- build: Builds the PatchEncoder object.
+- call: Encodes the image patches into projection vectors with positional embeddings.
+- get_random_indices: Gets random mask and unmask indices for the patches.
+- generate_masked_image: Generates a masked image based on the unmask indices.
+
+
+
+Examples:
+
+# Example for get_random_indices function
+patch_encoder = PatchEncoder()
+mask_indices, unmask_indices = patch_encoder.get_random_indices(batch_size=2)
+print(mask_indices)
+# Output: tf.Tensor(
+# [[ 6 12  2  1  8 11  0  9 13  4]
+#  [ 0 10  1 11  6  5  8  9  7 13]], shape=(2, 10), dtype=int32)
+
+print(unmask_indices)
+# Output: tf.Tensor(
+# [[ 3 14  5 15 10  7  4 16 17 18]
+#  [ 2  3 12  4  9 14 15  7  5 18]], shape=(2, 10), dtype=int32)
+
+
+# Example for generate_masked_image function
+patch_encoder = PatchEncoder()
+patches = np.random.rand(5, 16, 256)  # (batch_size, num_patches, patch_area)
+(_, _, _, _, unmask_indices) = patch_encoder(patches)
+new_patch, idx = patch_encoder.generate_masked_image(patches, unmask_indices)
+print(new_patch.shape)
+# Output: (16, 256)
+
+print(idx)
+# Output: 1
+
+
+Author: OpenAI (modified by Kristian Soerensen)
+        April 2023
+"""
+
+
 from ..CONSTANTS import *
 import tensorflow as tf
 import numpy as np
 
 
-class PatchEncoder(tf.keras.layers.Layer):
+class PatchEncoder(tf.keras.layers.Layer): 
+    """
+    Encodes image patches into projection vectors with positional embeddings.
+    """
+
     def __init__(
         self,
         patch_size=PATCH_SIZE,
@@ -12,6 +63,20 @@ class PatchEncoder(tf.keras.layers.Layer):
         downstream=False,
         **kwargs,
     ):
+        """
+        Initializes the PatchEncoder object.
+
+        Args:
+        - patch_size: Tuple representing the size of the patches.
+        - projection_dim: The dimension of the projected vector for each patch.
+        - mask_proportion: The proportion of patches to mask in the image.
+        - downstream: Boolean indicating whether the layer is being used downstream.
+        - kwargs: Keyword arguments.
+
+        Returns:
+        None.
+        """
+       
         super().__init__(**kwargs)
         self.patch_size = patch_size
         self.projection_dim = projection_dim
@@ -28,6 +93,15 @@ class PatchEncoder(tf.keras.layers.Layer):
         )
 
     def build(self, input_shape):
+        """
+        Builds the PatchEncoder object.
+
+        Args:
+        - input_shape: Tuple representing the shape of the input.
+
+        Returns:
+        None.
+        """
         (_, self.num_patches, self.patch_area) = input_shape
         # Create the projection layer for the patches.
         self.projection = tf.keras.layers.Dense(units=self.projection_dim)
@@ -41,6 +115,23 @@ class PatchEncoder(tf.keras.layers.Layer):
         self.num_mask = int(self.mask_proportion * self.num_patches)
 
     def call(self, patches):
+        """
+        Encodes the image patches into projection vectors with positional embeddings.
+
+        Args:
+        - patches: Tensor representing the image patches.
+
+        Returns:
+        If downstream is True:
+        - patch_embeddings: Tensor representing the encoded patches.
+
+        If downstream is False:
+        - unmasked_embeddings: Tensor representing the unmasked patch embeddings. Input to the encoder.
+        - masked_embeddings: Tensor representing the masked embeddings for the tokens. First part of input to the decoder.
+        - unmasked_positions: Tensor representing the unmasked position embeddings. Added to the encoder outputs.
+        - mask_indices: Tensor representing the indices that were masked.
+        - unmask_indices: Tensor representing the indices that were unmasked.
+        """
         # Get the positional embeddings.
         batch_size = tf.shape(patches)[0]
         positions = tf.range(start=0, limit=self.num_patches, delta=1)
@@ -90,6 +181,20 @@ class PatchEncoder(tf.keras.layers.Layer):
             )
 
     def get_random_indices(self, batch_size):
+        """
+        Generates random indices for masking patches in the input image.
+
+        Args:
+            batch_size (int): The number of samples in the batch.
+
+        Returns:
+            A tuple containing the following two tensors:
+            - mask_indices (tf.Tensor): A tensor of shape (batch_size, num_mask) containing
+            random indices for masking patches.
+            - unmask_indices (tf.Tensor): A tensor of shape (batch_size, num_patches - num_mask)
+            containing random indices for unmasking patches.
+
+        """
         # Create random indices from a uniform distribution and then split
         # it into mask and unmask indices.
         rand_indices = tf.argsort(
@@ -104,6 +209,24 @@ class PatchEncoder(tf.keras.layers.Layer):
         return mask_indices, unmask_indices
 
     def generate_masked_image(self, patches, unmask_indices, random_patch: bool = True):
+        """
+        Generates a masked version of a patch by randomly selecting patches to mask.
+
+        Args:
+            patches (numpy.ndarray): A numpy array of shape (batch_size, num_patches, patch_area)
+                containing image patches.
+            unmask_indices (tf.Tensor): A tensor of shape (batch_size, num_patches - num_mask)
+                containing random indices for unmasking patches.
+            random_patch (bool): If True, a random patch is selected for masking. Otherwise, the first
+                patch in the batch is used.
+
+        Returns:
+            A tuple containing the following two elements:
+            - new_patch (numpy.ndarray): A numpy array of the same shape as a patch, containing the
+                masked version of the selected patch.
+            - idx (int): The index of the patch in the batch that was masked.
+
+        """
         # Choose a random patch and it corresponding unmask index.
         if random_patch == True:
             idx = np.random.choice(patches.shape[0])

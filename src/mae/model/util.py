@@ -1,8 +1,3 @@
-import os
-import numpy as np
-import tensorflow as tf
-import io
-
 """
 Author: Kristian Sørensen
         kaaso@space.dtu.dk
@@ -33,6 +28,10 @@ More:
 
 """
 
+import os
+import numpy as np
+import tensorflow as tf
+import io
 
 class WarmUpCosine(tf.keras.optimizers.schedules.LearningRateSchedule):
     def __init__(
@@ -111,7 +110,7 @@ def model_builder(hp):
 
     Returns:
         model (tf.keras.Model): The model built with the given hyperparameters.
-    
+
 
     hp: HyperParameters class instance
     """
@@ -150,7 +149,7 @@ def load_gpu(which: int = 0, memory: int = 60000):
     Args:
         which (int): Index of the GPU to use (default is 0).
         memory (int): Amount of GPU memory to allocate in MB (default is 60000).
-    
+
     Returns:
         A distributed strategy object that can be used to distribute training on multiple GPUs.
 
@@ -160,7 +159,6 @@ def load_gpu(which: int = 0, memory: int = 60000):
     # Set environment variables to select the desired GPU
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(which)
-    
 
     # Check available physical GPUs
     gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -197,6 +195,7 @@ def get_lr_metric(optimizer):
         # Get a function that returns the current learning rate of the optimizer
         lr_function = get_lr_metric(optimizer)
     """
+
     @tf.autograph.experimental.do_not_convert
     def lr(y_true, y_pred):
         return optimizer.lr

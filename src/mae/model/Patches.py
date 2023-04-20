@@ -39,14 +39,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-
-
-
 class Patches(tf.keras.layers.Layer):
     """A custom Keras layer for extracting patches from images."""
+
     def __init__(self, patch_size=PATCH_SIZE, **kwargs):
         """Initializes the Patches layer.
-        
+
         Args:
             patch_size: A tuple representing the size of the patches to extract.
             **kwargs: Additional keyword arguments passed to the base class.
@@ -61,10 +59,10 @@ class Patches(tf.keras.layers.Layer):
 
     def call(self, images):
         """Extracts patches from the input images and returns the patches reshaped.
-        
+
         Args:
             images: A tensor representing a batch of input images.
-        
+
         Returns:
             A tensor of shape (batch_size, num_patches, patch_area), where
             batch_size is the number of images in the batch, num_patches is
@@ -86,11 +84,11 @@ class Patches(tf.keras.layers.Layer):
 
     def show_patched_image(self, images, patches):
         """A utility function that helps visualize one image and its patches side by side.
-        
+
         Args:
             images: A tensor representing a batch of input images.
             patches: A tensor representing the patches extracted from the input images.
-        
+
         Returns:
             The index of the image chosen to validate it outside the method.
         """

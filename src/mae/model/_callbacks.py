@@ -1,3 +1,21 @@
+"""
+This script defines a set of callbacks for Keras/Tensorflow models. 
+The get_callbacks function returns a list of callbacks including early stopping, 
+best model checkpointing, learning rate reduction, and custom callbacks for logging and monitoring.
+
+The SSIMMonitor callback calculates the Structural Similarity Index (SSIM) 
+between the model's reconstructed image and the original image for a set of test images. 
+
+The TrainMonitor callback visualizes the model's progress by generating images of 
+masked patches and their reconstructions at regular intervals during training.
+
+The script requires a set of dependencies including numpy, pandas, tensorflow, and keras. 
+It also imports custom modules that are not included in the script 
+(CL_Logger, CustomModelCheckpoint, PatchEncoder, and PatchLayer), 
+so it's not possible to run this script as is.
+
+"""
+
 import os
 from datetime import datetime
 

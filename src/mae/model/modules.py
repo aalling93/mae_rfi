@@ -3,6 +3,19 @@ from ..CONSTANTS import *
 
 
 def mlp(x, dropout_rate, hidden_units):
+
+    """
+    Multi-layer perceptron function.
+
+    Args:
+    x: input tensor
+    dropout_rate: dropout rate
+    hidden_units: number of hidden units
+
+    Returns:
+    Output tensor after applying dense and dropout layers.
+    """
+
     for units in hidden_units:
         x = tf.keras.layers.Dense(units, activation=tf.nn.gelu)(x)
         x = tf.keras.layers.Dropout(dropout_rate)(x)
@@ -16,6 +29,20 @@ def create_encoder(
     enc_projection_dim=ENC_PROJECTION_DIM,
     dropout=DROPOUT_RATE,
 ):
+    """
+    Function to create the encoder model.
+
+    Args:
+    num_heads: number of attention heads
+    num_layers: number of transformer layers
+    enc_transformer_units: number of transformer units
+    epsilon: layer normalization epsilon value
+    enc_projection_dim: encoder projection dimension
+    dropout: dropout rate
+
+    Returns:
+    Encoder model.
+    """
     inputs = tf.keras.layers.Input((None, enc_projection_dim))
     x = inputs
 
@@ -47,6 +74,23 @@ def create_decoder(
     epsilon=LAYER_NORM_EPS,
     dec_transformer_units = DEC_TRANSFORMER_UNITS
 ):
+    """
+    Function to create the decoder model.
+
+    Args:
+    num_layers: number of transformer layers
+    num_heads: number of attention heads
+    image_size: size of the input image
+    dropout: dropout rate
+    num_patches: number of image patches
+    enc_projection_dim: encoder projection dimension
+    dec_projection_dim: decoder projection dimension
+    epsilon: layer normalization epsilon value
+    dec_transformer_units: number of transformer units in the decoder
+
+    Returns:
+    Decoder model.
+    """
     inputs = tf.keras.layers.Input((num_patches, enc_projection_dim))
     x = tf.keras.layers.Dense(dec_projection_dim)(inputs)
 
