@@ -6,11 +6,26 @@ from clearml import Dataset, Logger, Task
 
 
 def clearml_log_scalar(ssim, epoch, series: str = "", title: str = "SSIM"):
+    """Logs scalar value to ClearML using the logger API.
+
+    Args:
+        ssim (float): Structural similarity index of the image.
+        epoch (int): Current epoch number.
+        series (str, optional): Series name to log under. Defaults to "".
+        title (str, optional): Title of the scalar plot. Defaults to "SSIM".
+    """
+    
     Logger.current_logger().report_scalar(title, series, iteration=epoch, value=ssim)
 
 
 
 def clearml_plot_model(model):
+    """Plots the Keras model and logs the plot to ClearML using the logger API.
+
+    Args:
+        model (tf.keras.Model): Keras model to plot.
+    """
+
     tf.keras.utils.plot_model(model, show_shapes=True, to_file="temp_del.png")
     fig = plt.figure(figsize=(15,60))
     plt.imshow(plt.imread('temp_del.png'))
@@ -24,6 +39,15 @@ def clearml_plot_model(model):
     os.remove("temp_del.png")
 
 def clearml_plot_examples(original, masked, reconstruct, epoch, img_ix):
+    """Plots the original, masked and reconstructed images and logs the plot to ClearML using the logger API.
+
+    Args:
+        original (np.ndarray): Original image.
+        masked (np.ndarray): Masked image.
+        reconstruct (np.ndarray): Reconstructed image.
+        epoch (int): Current epoch number.
+        img_ix (int): Index of the current image.
+    """
     
     fig = plt.figure(figsize=(15, 10))
     plt.subplot(2, 3, 1)

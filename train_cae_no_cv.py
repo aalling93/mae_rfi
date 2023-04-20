@@ -47,11 +47,7 @@ data.load_data(
 #train = data.train
 #test = data.test
 
-BATCH_SIZE = 5
-EPOCHS = 16
-WARMUP_EPOCH_PERCENTAGE = 0.01
-LEARNING_RATE = 0.01
-LEARNING_RATE_WARM_UP = LEARNING_RATE * 1e-4
+
 
 
 
