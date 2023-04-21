@@ -20,7 +20,7 @@ BATCH_SIZE = 1
 VERBOSE = 1
 GPU_NUMBER = 1
 GPU_MEMORY = 40000
-EPOCHS = 1000
+EPOCHS = 100
 WARMUP_EPOCH_PERCENTAGE = 0.05
 MASK_PROPORTION = 0.60  # We have found 75% masking to give us the best results.
 

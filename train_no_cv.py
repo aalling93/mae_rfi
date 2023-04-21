@@ -4,8 +4,9 @@ TRAINING SCRIPT.
 """
 
 import argparse
-from sys import platform
 import glob
+from sys import platform
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -13,14 +14,15 @@ from clearml import Task
 
 from src.mae import *
 from src.mae._mae_util import load_gpu
+from src.mae.CL_Logger import *
+from src.mae.CL_Logger.Clearml import clearml_plot_model
 from src.mae.CONSTANTS import *
 from src.mae.data import Data
 from src.mae.data._augment import *
-from src.mae.CL_Logger import *
 from src.mae.model._callbacks import *
 from src.mae.model._callbacks import get_callbacks
 from src.mae.model.util import get_lr_metric
-from src.mae.CL_Logger.Clearml import clearml_plot_model
+
 #change this
 parser = argparse.ArgumentParser(description="Training RFI mae")
 parser.add_argument("-BUFFER_SIZE", "--BUFFER_SIZE", help="BUFFER_SIZE", default=BUFFER_SIZE, type=int)
