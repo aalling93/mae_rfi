@@ -24,7 +24,7 @@ def _load_list_of_filenames(
     only_VH: bool = False,
     test_samples: int = 100,
 ):
-    images = np.array([np.load(im) for im in train_data])
+    images = np.array([np.load(im) for im in train_data],dtype=object)
     all_train_images = np.array(
         [
             _crop_file(im)
@@ -33,7 +33,7 @@ def _load_list_of_filenames(
         ]
     )
 
-    test_data = np.array([np.load(im) for im in test_data])
+    test_data = np.array([np.load(im) for im in test_data],dtype=object)
     all_test_images = np.array(
         [
             _crop_file(im)
