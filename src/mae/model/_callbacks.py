@@ -14,6 +14,18 @@ It also imports custom modules that are not included in the script
 (CL_Logger, CustomModelCheckpoint, PatchEncoder, and PatchLayer), 
 so it's not possible to run this script as is.
 
+
+Functions:
+
+classes (for callbacks):
+1) MemoryPrintingCallback: get memory usage for each epoch (def, print to clearml. no in terminal)
+2) SSIMMonitor (mae)
+3) TrainMonitor (mae)
+4) saveModel
+5) CustomModelCheckpoint
+6) WarmUpCosineDecayScheduler
+7) SSIMMonitor_ae (cae)
+8) TrainMonitor_ae (cae)
 """
 
 import os
@@ -23,12 +35,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from keras import backend as K
-
+import gc
 from ..CL_Logger import *
-
-
-
-
 
 
 def get_callbacks(
@@ -96,6 +104,27 @@ def get_callbacks(
     ]
 
     return callbacks
+
+
+class MemoryPrintingCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        gpu_dict = tf.config.experimental.get_memory_info("GPU:0")
+        clearml_log_scalar(
+            (float(gpu_dict["peak"]) / (1024**3)),
+            epoch,
+            series="Peak",
+            title="Model fit memory GB",
+        )
+        clearml_log_scalar(
+            (float(gpu_dict["peak"]) / (1024**3)),
+            epoch,
+            series="Current",
+            title="Model fit memory GB",
+        )
+
+        # tf.print('\n GPU memory details [current: {} gb, peak: {} gb]'.format(
+        #    float(gpu_dict['current']) / (1024 ** 3),
+        #    float(gpu_dict['peak']) / (1024 ** 3)))
 
 
 class SSIMMonitor(tf.keras.callbacks.Callback):
@@ -183,23 +212,21 @@ class TrainMonitor(tf.keras.callbacks.Callback):
                 except:
                     pass
 
-                
-                
-                
-                if self.test_images.shape[-1]==2:
-                    
+                if self.test_images.shape[-1] == 2:
+
                     clearml_plot_examples(
-                    original_image, masked_image, reconstructed_image, epoch, img_ix
+                        original_image, masked_image, reconstructed_image, epoch, img_ix
                     )
                 else:
-                    
-                    clearml_plot_one_polari_all(original_image[:,:,0],
-                                                masked_image[:,:,0],
-                                                reconstructed_image[:,:,0],
-                                                test_decoder_inputs[idx],
-                                                epoch,
-                                                img_ix
-                                                )
+
+                    clearml_plot_one_polari_all(
+                        original_image[:, :, 0],
+                        masked_image[:, :, 0],
+                        reconstructed_image[:, :, 0],
+                        test_decoder_inputs[idx],
+                        epoch,
+                        img_ix,
+                    )
 
 
 class saveModel(tf.keras.callbacks.Callback):
@@ -215,7 +242,6 @@ class saveModel(tf.keras.callbacks.Callback):
             self.model.save(
                 f"{self.model.name}/encoder_newest_epoch.h5", overwrite=True
             )
-
 
 
 class CustomModelCheckpoint(tf.keras.callbacks.Callback):
@@ -238,8 +264,6 @@ class CustomModelCheckpoint(tf.keras.callbacks.Callback):
                 )
                 lr = K.get_value(self.model.optimizer.lr)
                 self.learning_rates.append(lr)
-
-
 
             pd.DataFrame(self.model.history.history).to_pickle(
                 f"{self.model_folder}/{self.model.name}/history/history_newest_epoch_{self.model.name}.pkl"
@@ -334,65 +358,63 @@ def cosine_decay_with_warmup(
     return tf.where(global_step > total_steps, 0.0, learning_rate, name="learning_rate")
 
 
-
 class SSIMMonitor_ae(tf.keras.callbacks.Callback):
-    def __init__(self, train_images,test_images):
-        self.test_images = test_images
-        self.train_images = train_images
+    def __init__(self, train_images, test_images):
+        self.test_images = tf.cast(test_images, tf.float32)
+        self.train_images = tf.cast(train_images, tf.float32)
 
     def on_epoch_end(self, epoch, logs=None):
-        
+
         test_decoder_outputs = self.model.predict(self.test_images)
-        test_decoder_outputs = tf.cast(test_decoder_outputs, tf.float32)
-        test_images = tf.cast(self.test_images, tf.float32) 
-        #print(test_decoder_outputs.shape)
-        #print(test_images.shape)
+        # test_decoder_outputs = tf.cast(test_decoder_outputs, tf.float32)
+        # test_images = tf.cast(self.test_images, tf.float32)
+        # print(test_decoder_outputs.shape)
+        # print(test_images.shape)
         sim_test = tf.reduce_mean(
             tf.image.ssim(
-                abs(test_images),
+                abs(self.test_images),
                 abs(test_decoder_outputs),
                 1.0,
             )
         )
         sim_vv_test = tf.reduce_mean(
             tf.image.ssim(
-                abs(test_images[:,:,:,0:1]),
-                abs(test_decoder_outputs[:,:,:,0:1]),
+                abs(self.test_images[:, :, :, 0:1]),
+                abs(test_decoder_outputs[:, :, :, 0:1]),
                 1.0,
             )
         )
         sim_vh_test = tf.reduce_mean(
             tf.image.ssim(
-                abs(test_images[:,:,:,1:]),
-                abs(test_decoder_outputs[:,:,:,1:]),
+                abs(self.test_images[:, :, :, 1:]),
+                abs(test_decoder_outputs[:, :, :, 1:]),
                 1.0,
             )
         )
 
-
-        test_decoder_outputs = self.model.predict(self.train_images)
-        test_decoder_outputs = tf.cast(test_decoder_outputs, tf.float32)
-        test_images = tf.cast(self.train_images, tf.float32) 
-        #print(test_decoder_outputs.shape)
-        #print(test_images.shape)
+        train_decoder_outputs = self.model.predict(self.train_images)
+        # test_decoder_outputs = tf.cast(test_decoder_outputs, tf.float32)
+        # test_images = tf.cast(self.train_images, tf.float32)
+        # print(test_decoder_outputs.shape)
+        # print(test_images.shape)
         sim_train = tf.reduce_mean(
             tf.image.ssim(
-                abs(test_images),
-                abs(test_decoder_outputs),
+                abs(self.train_images),
+                abs(train_decoder_outputs),
                 1.0,
             )
         )
         sim_vv_train = tf.reduce_mean(
             tf.image.ssim(
-                abs(test_images[:,:,:,0:1]),
-                abs(test_decoder_outputs[:,:,:,0:1]),
+                abs(self.train_images[:, :, :, 0:1]),
+                abs(train_decoder_outputs[:, :, :, 0:1]),
                 1.0,
             )
         )
         sim_vh_train = tf.reduce_mean(
             tf.image.ssim(
-                abs(test_images[:,:,:,1:]),
-                abs(test_decoder_outputs[:,:,:,1:]),
+                abs(self.train_images[:, :, :, 1:]),
+                abs(train_decoder_outputs[:, :, :, 1:]),
                 1.0,
             )
         )
@@ -404,33 +426,40 @@ class SSIMMonitor_ae(tf.keras.callbacks.Callback):
         clearml_log_scalar(sim_train, epoch, "train_all", "SSIM")
         clearml_log_scalar(sim_vv_train, epoch, "train_vv", "SSIM")
         clearml_log_scalar(sim_vh_train, epoch, "train_vh", "SSIM")
+        tf.keras.backend.clear_session()
+        gc.collect()
 
 
 class TrainMonitor_ae(tf.keras.callbacks.Callback):
-    def __init__(self, epoch_interval:int=5, test_images=None):
+    def __init__(self, epoch_interval: int = 5, test_images=None):
         self.epoch_interval = epoch_interval
         self.test_images = test_images
 
     def on_epoch_end(self, epoch, logs=None):
         if self.epoch_interval and epoch % self.epoch_interval == 0:
+
             for img_ix in range(len(self.test_images)):
 
-                encoded = self.model.layers[1].predict(self.test_images[img_ix:img_ix+1])
+                encoded = self.model.layers[1].predict(
+                    self.test_images[img_ix : img_ix + 1]
+                )
                 decoded = self.model.layers[2].predict(encoded)
 
-
-
-                #clearml_plot_org_latent_recon(
+                # clearml_plot_org_latent_recon(
                 #    self.test_images[img_ix], encoded[0], decoded[0], epoch, img_ix
-                #)
+                # )
 
-                #print(encoded.shape)
-                #print(encoded.shape)
-                if self.test_images.shape[-1]==2:
+                # print(encoded.shape)
+                # print(encoded.shape)
+                if self.test_images.shape[-1] == 2:
                     clearml_plot_org_latent_recon(
-                    self.test_images[img_ix], encoded[0], decoded[0], epoch, img_ix
+                        self.test_images[img_ix], encoded[0], decoded[0], epoch, img_ix
                     )
                 else:
                     clearml_plot_org_latent_recon_single_pil(
-                    self.test_images[img_ix][:,:,0], encoded[0], decoded[0][:,:,0], epoch, img_ix
-                     )
+                        self.test_images[img_ix][:, :, 0],
+                        encoded[0],
+                        decoded[0][:, :, 0],
+                        epoch,
+                        img_ix,
+                    )
