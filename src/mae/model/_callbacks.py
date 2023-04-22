@@ -116,7 +116,7 @@ class MemoryPrintingCallback(tf.keras.callbacks.Callback):
             title="Model fit memory GB",
         )
         clearml_log_scalar(
-            (float(gpu_dict["peak"]) / (1024**3)),
+            (float(gpu_dict["current"]) / (1024**3)),
             epoch,
             series="Current",
             title="Model fit memory GB",
