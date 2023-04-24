@@ -19,6 +19,29 @@ def clearml_log_scalar(ssim, epoch, series: str = "", title: str = "SSIM"):
 
 
 
+
+def clearml_log_figure(array, epoch, series: str = "", title: str = ""):
+    """Logs scalar value to ClearML using the logger API.
+
+    Args:
+        array (NxM) or (NxMx3): image 
+        epoch (int): Current epoch number.
+        series (str, optional): Series name to log under. Defaults to "".
+        title (str, optional): Title of the scalar plot. Defaults to "".
+    """
+    fig = plt.figure(figsize=(10,10))
+    im = plt.imshow(array,cmap='gray')
+    cb = plt.colorbar(im, shrink=0.8, orientation="vertical")
+    cb.set_label("Intensity")
+    Task.current_task().get_logger().report_matplotlib_figure(
+        title=title,
+        series=series, 
+        iteration=epoch,
+        figure=fig
+    )
+
+
+
 def clearml_plot_model(model):
     """Plots the Keras model and logs the plot to ClearML using the logger API.
 
